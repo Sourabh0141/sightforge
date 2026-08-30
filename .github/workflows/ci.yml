@@ -55,9 +55,8 @@ jobs:
               - 'README.md'
               - 'LICENSE'
 
-  # Language and scan jobs will be fully populated in P5 U2, P5 U3, P5 U4
   typescript-checks:
-    name: TypeScript Checks (Lint, Types, Tests)
+    name: TypeScript & Worker Checks (Lint, Types, Tests, Build)
     needs: detect-changes
     if: needs.detect-changes.outputs.typescript == 'true'
     runs-on: ubuntu-latest
@@ -79,11 +78,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run TypeScript checks
-        run: pnpm turbo run lint typecheck test build
+      - name: Format Check
+        run: pnpm format:check
+
+      - name: Run Linters & Typecheck
+        run: pnpm turbo run lint typecheck
+
+      - name: Run Worker & Package Tests
+        run: pnpm turbo run test
+
+      - name: Run Builds
+        run: pnpm turbo run build
 
   python-checks:
-    name: Python Checks (Ruff, Mypy, Pytest)
+    name: Python Inference Checks (Ruff, Mypy, Pytest)
     needs: detect-changes
     if: needs.detect-changes.outputs.python == 'true'
     runs-on: ubuntu-latest
@@ -102,12 +110,20 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Run Python checks
-        run: |
-          uv sync --all-extras
-          uv run ruff check services/inference
-          uv run mypy services/inference
-          uv run pytest services/inference
+      - name: Sync dependencies
+        run: uv sync --locked --all-packages --all-groups --all-extras
+
+      - name: Lint Check (Ruff)
+        run: uv run ruff check services/inference
+
+      - name: Format Check (Ruff)
+        run: uv run ruff format --check services/inference
+
+      - name: Typecheck (Mypy)
+        run: uv run mypy services/inference
+
+      - name: Run Pytest
+        run: uv run pytest services/inference
 
   # The unconditional Aggregator check (Single Required Status Check for Branch Protection)
   ci-aggregator:

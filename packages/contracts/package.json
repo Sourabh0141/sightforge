@@ -8,10 +8,11 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "echo \"@sightforge/contracts lint ok\"",
-    "test": "echo \"@sightforge/contracts test ok\"",
+    "test": "vitest run",
     "build": "echo \"@sightforge/contracts build ok\""
   },
   "devDependencies": {
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.11"
   }
 }
