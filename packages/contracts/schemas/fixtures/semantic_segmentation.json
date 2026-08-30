@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "job_id": "job_01j7abc123def4567890123461",
+  "task": "semantic-segmentation",
+  "model_variant": "yolo26n",
+  "mode": "per-frame",
+  "media_type": "image",
+  "summary": {
+    "source_fps": 0.0,
+    "sampled_fps": 0.0,
+    "frames_processed": 1,
+    "duration_ms": 0.0,
+    "inference_duration_ms": 64.0,
+    "cold_start_duration_ms": 0.0
+  },
+  "artifact": {
+    "key": "artifacts/job_01j7abc123def4567890123461/semantic_map.png",
+    "width": 640,
+    "height": 480,
+    "frame_count": 1,
+    "encoding": "image/png",
+    "color_palette": [
+      { "class_id": 0, "class_name": "background", "hex_color": "#000000" },
+      { "class_id": 1, "class_name": "road", "hex_color": "#808080" },
+      { "class_id": 2, "class_name": "sky", "hex_color": "#70D0FF" },
+      { "class_id": 3, "class_name": "vegetation", "hex_color": "#20A020" }
+    ]
+  }
+}

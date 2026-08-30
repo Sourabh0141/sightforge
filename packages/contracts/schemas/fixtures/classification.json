@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "job_id": "job_01j7abc123def4567890123460",
+  "task": "classification",
+  "model_variant": "yolo26n",
+  "mode": "per-frame",
+  "media_type": "image",
+  "summary": {
+    "source_fps": 0.0,
+    "sampled_fps": 0.0,
+    "frames_processed": 1,
+    "duration_ms": 0.0,
+    "inference_duration_ms": 22.1,
+    "cold_start_duration_ms": 0.0
+  },
+  "frames": [
+    {
+      "frame_index": 0,
+      "timestamp_ms": 0.0,
+      "predictions": [
+        {
+          "class_id": 281,
+          "class_name": "tabby cat",
+          "confidence": 0.865,
+          "rank": 1
+        },
+        {
+          "class_id": 282,
+          "class_name": "tiger cat",
+          "confidence": 0.092,
+          "rank": 2
+        },
+        {
+          "class_id": 285,
+          "class_name": "Egyptian cat",
+          "confidence": 0.021,
+          "rank": 3
+        }
+      ]
+    }
+  ]
+}

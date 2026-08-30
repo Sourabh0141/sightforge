@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0.0",
+  "job_id": "job_01j7abc123def4567890123458",
+  "task": "pose",
+  "model_variant": "yolo26n",
+  "mode": "per-frame",
+  "media_type": "image",
+  "summary": {
+    "source_fps": 0.0,
+    "sampled_fps": 0.0,
+    "frames_processed": 1,
+    "duration_ms": 0.0,
+    "inference_duration_ms": 46.1,
+    "cold_start_duration_ms": 0.0
+  },
+  "frames": [
+    {
+      "frame_index": 0,
+      "timestamp_ms": 0.0,
+      "instances": [
+        {
+          "box": [100.0, 100.0, 120.0, 320.0],
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.965,
+          "keypoints": [
+            {
+              "x": 160.0,
+              "y": 120.0,
+              "confidence": 0.98,
+              "visible": true,
+              "name": "nose",
+              "index": 0
+            },
+            {
+              "x": 155.0,
+              "y": 115.0,
+              "confidence": 0.95,
+              "visible": true,
+              "name": "left_eye",
+              "index": 1
+            },
+            {
+              "x": 165.0,
+              "y": 115.0,
+              "confidence": 0.96,
+              "visible": true,
+              "name": "right_eye",
+              "index": 2
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

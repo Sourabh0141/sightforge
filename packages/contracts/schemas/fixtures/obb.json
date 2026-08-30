@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "job_id": "job_01j7abc123def4567890123459",
+  "task": "obb",
+  "model_variant": "yolo26n",
+  "mode": "per-frame",
+  "media_type": "image",
+  "summary": {
+    "source_fps": 0.0,
+    "sampled_fps": 0.0,
+    "frames_processed": 1,
+    "duration_ms": 0.0,
+    "inference_duration_ms": 44.3,
+    "cold_start_duration_ms": 0.0
+  },
+  "frames": [
+    {
+      "frame_index": 0,
+      "timestamp_ms": 0.0,
+      "instances": [
+        {
+          "rbox": [320.0, 240.0, 180.0, 90.0, 35.5],
+          "class_id": 9,
+          "class_name": "traffic light",
+          "confidence": 0.892
+        }
+      ]
+    }
+  ]
+}

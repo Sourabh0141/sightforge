@@ -1,0 +1,610 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "result.schema.json",
+  "title": "SightForgeResultDocument",
+  "description": "Canonical result document contract for SightForge computer vision tasks",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "job_id",
+    "task",
+    "model_variant",
+    "mode",
+    "media_type",
+    "summary"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0.0"],
+      "description": "Contract schema version per R51"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Unique identifier for the job"
+    },
+    "task": {
+      "type": "string",
+      "enum": [
+        "detection",
+        "instance-segmentation",
+        "pose",
+        "obb",
+        "classification",
+        "semantic-segmentation",
+        "depth"
+      ],
+      "description": "Computer vision task discriminator"
+    },
+    "model_variant": {
+      "type": "string",
+      "description": "Model architecture variant name (e.g. yolo26n, yolo26s)"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["per-frame", "tracking"],
+      "description": "Processing mode: independent per-frame analysis or video tracking"
+    },
+    "media_type": {
+      "type": "string",
+      "enum": ["image", "video"],
+      "description": "Original media type"
+    },
+    "summary": {
+      "$ref": "#/definitions/ProcessingSummary"
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/definitions/DetectionResult" },
+    { "$ref": "#/definitions/InstanceSegmentationResult" },
+    { "$ref": "#/definitions/PoseResult" },
+    { "$ref": "#/definitions/ObbResult" },
+    { "$ref": "#/definitions/ClassificationResult" },
+    { "$ref": "#/definitions/SemanticSegmentationResult" },
+    { "$ref": "#/definitions/DepthResult" }
+  ],
+  "definitions": {
+    "ProcessingSummary": {
+      "type": "object",
+      "required": [
+        "source_fps",
+        "sampled_fps",
+        "frames_processed",
+        "duration_ms",
+        "inference_duration_ms",
+        "cold_start_duration_ms"
+      ],
+      "properties": {
+        "source_fps": { "type": "number", "minimum": 0 },
+        "sampled_fps": { "type": "number", "minimum": 0 },
+        "frames_processed": { "type": "integer", "minimum": 1 },
+        "duration_ms": { "type": "number", "minimum": 0 },
+        "inference_duration_ms": { "type": "number", "minimum": 0 },
+        "cold_start_duration_ms": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "BoundingBox": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 4,
+      "maxItems": 4,
+      "description": "[x_min, y_min, width, height] normalized or pixel coordinates"
+    },
+    "RotatedBoundingBox": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 5,
+      "maxItems": 5,
+      "description": "[center_x, center_y, width, height, angle_degrees]"
+    },
+    "CoordinatePoint": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "[x, y]"
+    },
+    "PoseKeypoint": {
+      "type": "object",
+      "required": ["x", "y", "confidence", "visible", "name", "index"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "visible": { "type": "boolean" },
+        "name": { "type": "string" },
+        "index": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "ClassificationPrediction": {
+      "type": "object",
+      "required": ["class_id", "class_name", "confidence", "rank"],
+      "properties": {
+        "class_id": { "type": "integer", "minimum": 0 },
+        "class_name": { "type": "string" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "rank": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+
+    "DetectionInstance": {
+      "type": "object",
+      "required": ["box", "class_id", "class_name", "confidence"],
+      "properties": {
+        "box": { "$ref": "#/definitions/BoundingBox" },
+        "class_id": { "type": "integer", "minimum": 0 },
+        "class_name": { "type": "string" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "DetectionFrame": {
+      "type": "object",
+      "required": ["frame_index", "timestamp_ms", "instances"],
+      "properties": {
+        "frame_index": { "type": "integer", "minimum": 0 },
+        "timestamp_ms": { "type": "number", "minimum": 0 },
+        "instances": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/DetectionInstance" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "DetectionTrackObservation": {
+      "type": "object",
+      "required": ["frame_index", "timestamp_ms", "box", "confidence"],
+      "properties": {
+        "frame_index": { "type": "integer", "minimum": 0 },
+        "timestamp_ms": { "type": "number", "minimum": 0 },
+        "box": { "$ref": "#/definitions/BoundingBox" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "DetectionTrack": {
+      "type": "object",
+      "required": [
+        "track_id",
+        "class_id",
+        "class_name",
+        "confidence_avg",
+        "observations"
+      ],
+      "properties": {
+        "track_id": { "type": "integer", "minimum": 1 },
+        "class_id": { "type": "integer", "minimum": 0 },
+        "class_name": { "type": "string" },
+        "confidence_avg": { "type": "number", "minimum": 0, "maximum": 1 },
+        "observations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/DetectionTrackObservation" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "DetectionResult": {
+      "type": "object",
+      "properties": {
+        "task": { "const": "detection" },
+        "frames": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/DetectionFrame" }
+        },
+        "tracks": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/DetectionTrack" }
+        }
+      },
+      "oneOf": [
+        {
+          "properties": { "mode": { "const": "per-frame" } },
+          "required": ["frames"]
+        },
+        {
+          "properties": { "mode": { "const": "tracking" } },
+          "required": ["tracks"]
+        }
+      ]
+    },
+
+    "InstanceSegmentationInstance": {
+      "type": "object",
+      "required": ["box", "polygon", "class_id", "class_name", "confidence"],
+      "properties": {
+        "box": { "$ref": "#/definitions/BoundingBox" },
+        "polygon": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/CoordinatePoint" },
+          "minItems": 3
+        },
+        "class_id": { "type": "integer", "minimum": 0 },
+        "class_name": { "type": "string" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "InstanceSegmentationFrame": {
+      "type": "object",
+      "required": ["frame_index", "timestamp_ms", "instances"],
+      "properties": {
+        "frame_index": { "type": "integer", "minimum": 0 },
+        "timestamp_ms": { "type": "number", "minimum": 0 },
+        "instances": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/InstanceSegmentationInstance" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "InstanceSegmentationTrackObservation": {
+      "type": "object",
+      "required": [
+        "frame_index",
+        "timestamp_ms",
+        "box",
+        "polygon",
+        "confidence"
+      ],
+      "properties": {
+        "frame_index": { "type": "integer", "minimum": 0 },
+        "timestamp_ms": { "type": "number", "minimum": 0 },
+        "box": { "$ref": "#/definitions/BoundingBox" },
+        "polygon": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/CoordinatePoint" },
+          "minItems": 3
+        },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "InstanceSegmentationTrack": {
+      "type": "object",
+      "required": [
+        "track_id",
+        "class_id",
+        "class_name",
+        "confidence_avg",
+        "observations"
+      ],
+      "properties": {
+        "track_id": { "type": "integer", "minimum": 1 },
+        "class_id": { "type": "integer", "minimum": 0 },
+        "class_name": { "type": "string" },
+        "confidence_avg": { "type": "number", "minimum": 0, "maximum": 1 },
+        "observations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InstanceSegmentationTrackObservation"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "InstanceSegmentationResult": {
+      "type": "object",
+      "properties": {
+        "task": { "const": "instance-segmentation" },
+        "frames": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/InstanceSegmentationFrame" }
+        },
+        "tracks": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/InstanceSegmentationTrack" }
+        }
+      },
+      "oneOf": [
+        {
+          "properties": { "mode": { "const": "per-frame" } },
+          "required": ["frames"]
+        },
+        {
+          "properties": { "mode": { "const": "tracking" } },
+          "required": ["tracks"]
+        }
+      ]
+    },
+
+    "PoseInstance": {
+      "type": "object",
+      "required": ["box", "keypoints", "class_id", "class_name", "confidence"],
+      "properties": {
+        "box": { "$ref": "#/definitions/BoundingBox" },
+        "keypoints": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/PoseKeypoint" },
+          "minItems": 1
+        },
+        "class_id": { "type": "integer", "minimum": 0 },
+        "class_name": { "type": "string" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "PoseFrame": {
+      "type": "object",
+      "required": ["frame_index", "timestamp_ms", "instances"],
+      "properties": {
+        "frame_index": { "type": "integer", "minimum": 0 },
+        "timestamp_ms": { "type": "number", "minimum": 0 },
+        "instances": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/PoseInstance" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "PoseTrackObservation": {
+      "type": "object",
+      "required": [
+        "frame_index",
+        "timestamp_ms",
+        "box",
+        "keypoints",
+        "confidence"
+      ],
+      "properties": {
+        "frame_index": { "type": "integer", "minimum": 0 },
+        "timestamp_ms": { "type": "number", "minimum": 0 },
+        "box": { "$ref": "#/definitions/BoundingBox" },
+        "keypoints": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/PoseKeypoint" },
+          "minItems": 1
+        },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "PoseTrack": {
+      "type": "object",
+      "required": [
+        "track_id",
+        "class_id",
+        "class_name",
+        "confidence_avg",
+        "observations"
+      ],
+      "properties": {
+        "track_id": { "type": "integer", "minimum": 1 },
+        "class_id": { "type": "integer", "minimum": 0 },
+        "class_name": { "type": "string" },
+        "confidence_avg": { "type": "number", "minimum": 0, "maximum": 1 },
+        "observations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/PoseTrackObservation" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "PoseResult": {
+      "type": "object",
+      "properties": {
+        "task": { "const": "pose" },
+        "frames": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/PoseFrame" }
+        },
+        "tracks": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/PoseTrack" }
+        }
+      },
+      "oneOf": [
+        {
+          "properties": { "mode": { "const": "per-frame" } },
+          "required": ["frames"]
+        },
+        {
+          "properties": { "mode": { "const": "tracking" } },
+          "required": ["tracks"]
+        }
+      ]
+    },
+
+    "ObbInstance": {
+      "type": "object",
+      "required": ["rbox", "class_id", "class_name", "confidence"],
+      "properties": {
+        "rbox": { "$ref": "#/definitions/RotatedBoundingBox" },
+        "class_id": { "type": "integer", "minimum": 0 },
+        "class_name": { "type": "string" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "ObbFrame": {
+      "type": "object",
+      "required": ["frame_index", "timestamp_ms", "instances"],
+      "properties": {
+        "frame_index": { "type": "integer", "minimum": 0 },
+        "timestamp_ms": { "type": "number", "minimum": 0 },
+        "instances": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ObbInstance" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ObbTrackObservation": {
+      "type": "object",
+      "required": ["frame_index", "timestamp_ms", "rbox", "confidence"],
+      "properties": {
+        "frame_index": { "type": "integer", "minimum": 0 },
+        "timestamp_ms": { "type": "number", "minimum": 0 },
+        "rbox": { "$ref": "#/definitions/RotatedBoundingBox" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "ObbTrack": {
+      "type": "object",
+      "required": [
+        "track_id",
+        "class_id",
+        "class_name",
+        "confidence_avg",
+        "observations"
+      ],
+      "properties": {
+        "track_id": { "type": "integer", "minimum": 1 },
+        "class_id": { "type": "integer", "minimum": 0 },
+        "class_name": { "type": "string" },
+        "confidence_avg": { "type": "number", "minimum": 0, "maximum": 1 },
+        "observations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ObbTrackObservation" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ObbResult": {
+      "type": "object",
+      "properties": {
+        "task": { "const": "obb" },
+        "frames": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ObbFrame" }
+        },
+        "tracks": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ObbTrack" }
+        }
+      },
+      "oneOf": [
+        {
+          "properties": { "mode": { "const": "per-frame" } },
+          "required": ["frames"]
+        },
+        {
+          "properties": { "mode": { "const": "tracking" } },
+          "required": ["tracks"]
+        }
+      ]
+    },
+
+    "ClassificationFrame": {
+      "type": "object",
+      "required": ["frame_index", "timestamp_ms", "predictions"],
+      "properties": {
+        "frame_index": { "type": "integer", "minimum": 0 },
+        "timestamp_ms": { "type": "number", "minimum": 0 },
+        "predictions": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ClassificationPrediction" },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "ClassificationResult": {
+      "type": "object",
+      "required": ["frames"],
+      "properties": {
+        "task": { "const": "classification" },
+        "mode": { "const": "per-frame" },
+        "frames": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ClassificationFrame" }
+        }
+      }
+    },
+
+    "SemanticSegmentationColorMapping": {
+      "type": "object",
+      "required": ["class_id", "class_name", "hex_color"],
+      "properties": {
+        "class_id": { "type": "integer", "minimum": 0 },
+        "class_name": { "type": "string" },
+        "hex_color": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SemanticSegmentationArtifact": {
+      "type": "object",
+      "required": [
+        "key",
+        "width",
+        "height",
+        "frame_count",
+        "encoding",
+        "color_palette"
+      ],
+      "properties": {
+        "key": { "type": "string", "description": "R2 artifact object key" },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "frame_count": { "type": "integer", "minimum": 1 },
+        "encoding": { "type": "string", "enum": ["image/png"] },
+        "color_palette": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/SemanticSegmentationColorMapping" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "SemanticSegmentationResult": {
+      "type": "object",
+      "required": ["artifact"],
+      "properties": {
+        "task": { "const": "semantic-segmentation" },
+        "mode": { "const": "per-frame" },
+        "artifact": { "$ref": "#/definitions/SemanticSegmentationArtifact" }
+      }
+    },
+
+    "DepthMetadata": {
+      "type": "object",
+      "required": [
+        "unit",
+        "scale_factor",
+        "min_depth_meters",
+        "max_depth_meters"
+      ],
+      "properties": {
+        "unit": { "type": "string", "enum": ["meters"] },
+        "scale_factor": { "type": "number", "minimum": 0 },
+        "min_depth_meters": { "type": "number", "minimum": 0 },
+        "max_depth_meters": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "DepthArtifact": {
+      "type": "object",
+      "required": [
+        "key",
+        "width",
+        "height",
+        "frame_count",
+        "encoding",
+        "depth_metadata"
+      ],
+      "properties": {
+        "key": { "type": "string", "description": "R2 artifact object key" },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "frame_count": { "type": "integer", "minimum": 1 },
+        "encoding": { "type": "string", "enum": ["image/png"] },
+        "depth_metadata": { "$ref": "#/definitions/DepthMetadata" }
+      },
+      "additionalProperties": false
+    },
+    "DepthResult": {
+      "type": "object",
+      "required": ["artifact"],
+      "properties": {
+        "task": { "const": "depth" },
+        "mode": { "const": "per-frame" },
+        "artifact": { "$ref": "#/definitions/DepthArtifact" }
+      }
+    }
+  }
+}
