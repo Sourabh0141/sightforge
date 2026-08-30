@@ -111,7 +111,7 @@ jobs:
           python-version: "3.11"
 
       - name: Sync dependencies
-        run: uv sync --locked --all-extras
+        run: uv sync --locked --all-packages --all-groups --all-extras
 
       - name: Lint Check (Ruff)
         run: uv run ruff check services/inference
