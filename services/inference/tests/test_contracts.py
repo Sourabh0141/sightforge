@@ -2,9 +2,9 @@
 
 import json
 from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
-
 from sightforge_inference.contracts import (
     SightForgeResultDocument,
 )

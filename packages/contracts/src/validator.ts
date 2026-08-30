@@ -1,20 +1,6 @@
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import Ajv, { type ValidateFunction } from "ajv";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, "..");
-const resultSchemaPath = path.join(rootDir, "schemas", "result.schema.json");
-const defaultsSchemaPath = path.join(
-  rootDir,
-  "schemas",
-  "defaults.schema.json",
-);
-
-const resultSchema = JSON.parse(fs.readFileSync(resultSchemaPath, "utf-8"));
-const defaultsSchema = JSON.parse(fs.readFileSync(defaultsSchemaPath, "utf-8"));
+import defaultsSchema from "../schemas/defaults.schema.json";
+import resultSchema from "../schemas/result.schema.json";
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 

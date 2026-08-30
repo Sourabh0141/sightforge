@@ -1,24 +1,18 @@
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import defaultsConfig from "../../../config/defaults.json";
+import classificationFixture from "../schemas/fixtures/classification.json";
+import depthFixture from "../schemas/fixtures/depth.json";
+import detectionFixture from "../schemas/fixtures/detection.json";
+import instanceSegFixture from "../schemas/fixtures/instance_segmentation.json";
+import obbFixture from "../schemas/fixtures/obb.json";
+import poseFixture from "../schemas/fixtures/pose.json";
+import semanticSegFixture from "../schemas/fixtures/semantic_segmentation.json";
+import trackingDetectionFixture from "../schemas/fixtures/tracking_detection.json";
 import {
   SIGHTFORGE_CONTRACT_VERSION,
   validateDefaultsConfig,
   validateResultDocument,
 } from "./index";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, "..");
-const fixturesDir = path.join(rootDir, "schemas", "fixtures");
-const defaultsConfigPath = path.resolve(
-  rootDir,
-  "..",
-  "..",
-  "config",
-  "defaults.json",
-);
 
 describe("@sightforge/contracts - Version", () => {
   it("exports contract version matching 1.0.0 per R51", () => {
@@ -27,22 +21,20 @@ describe("@sightforge/contracts - Version", () => {
 });
 
 describe("@sightforge/contracts - Positive Fixture Validation", () => {
-  const fixtures = [
-    "detection.json",
-    "instance_segmentation.json",
-    "pose.json",
-    "obb.json",
-    "classification.json",
-    "semantic_segmentation.json",
-    "depth.json",
-    "tracking_detection.json",
-  ];
+  const fixtures: Record<string, unknown> = {
+    "detection.json": detectionFixture,
+    "instance_segmentation.json": instanceSegFixture,
+    "pose.json": poseFixture,
+    "obb.json": obbFixture,
+    "classification.json": classificationFixture,
+    "semantic_segmentation.json": semanticSegFixture,
+    "depth.json": depthFixture,
+    "tracking_detection.json": trackingDetectionFixture,
+  };
 
-  for (const fixtureName of fixtures) {
+  for (const [fixtureName, fixtureData] of Object.entries(fixtures)) {
     it(`validates fixture: ${fixtureName}`, () => {
-      const fixturePath = path.join(fixturesDir, fixtureName);
-      const data = JSON.parse(fs.readFileSync(fixturePath, "utf-8"));
-      const res = validateResultDocument(data);
+      const res = validateResultDocument(fixtureData);
       expect(
         res.valid,
         `Fixture ${fixtureName} failed validation: ${res.errors?.join(", ")}`,
@@ -51,10 +43,7 @@ describe("@sightforge/contracts - Positive Fixture Validation", () => {
   }
 
   it("validates config/defaults.json against defaults schema per R78", () => {
-    const defaultsData = JSON.parse(
-      fs.readFileSync(defaultsConfigPath, "utf-8"),
-    );
-    const res = validateDefaultsConfig(defaultsData);
+    const res = validateDefaultsConfig(defaultsConfig);
     expect(
       res.valid,
       `defaults.json failed validation: ${res.errors?.join(", ")}`,
@@ -64,36 +53,26 @@ describe("@sightforge/contracts - Positive Fixture Validation", () => {
 
 describe("@sightforge/contracts - Negative Fixture Validation", () => {
   it("rejects document missing schema_version per R51", () => {
-    const detectionFixture = JSON.parse(
-      fs.readFileSync(path.join(fixturesDir, "detection.json"), "utf-8"),
-    );
-    delete detectionFixture.schema_version;
-    const res = validateResultDocument(detectionFixture);
+    const invalidDoc = { ...detectionFixture } as Record<string, unknown>;
+    delete invalidDoc.schema_version;
+    const res = validateResultDocument(invalidDoc);
     expect(res.valid).toBe(false);
   });
 
   it("rejects document missing task discriminator", () => {
-    const detectionFixture = JSON.parse(
-      fs.readFileSync(path.join(fixturesDir, "detection.json"), "utf-8"),
-    );
-    delete detectionFixture.task;
-    const res = validateResultDocument(detectionFixture);
+    const invalidDoc = { ...detectionFixture } as Record<string, unknown>;
+    delete invalidDoc.task;
+    const res = validateResultDocument(invalidDoc);
     expect(res.valid).toBe(false);
   });
 
   it("rejects document with mismatched task and payload (detection with depth artifact)", () => {
-    const depthFixture = JSON.parse(
-      fs.readFileSync(path.join(fixturesDir, "depth.json"), "utf-8"),
-    );
     const mismatched = { ...depthFixture, task: "detection" };
     const res = validateResultDocument(mismatched);
     expect(res.valid).toBe(false);
   });
 
   it("rejects tracking mode on classification result per R43", () => {
-    const classificationFixture = JSON.parse(
-      fs.readFileSync(path.join(fixturesDir, "classification.json"), "utf-8"),
-    );
     const invalidTracking = {
       ...classificationFixture,
       mode: "tracking",
@@ -112,9 +91,6 @@ describe("@sightforge/contracts - Negative Fixture Validation", () => {
   });
 
   it("rejects tracking mode on depth result per R43", () => {
-    const depthFixture = JSON.parse(
-      fs.readFileSync(path.join(fixturesDir, "depth.json"), "utf-8"),
-    );
     const invalidTracking = {
       ...depthFixture,
       mode: "tracking",
@@ -158,14 +134,12 @@ describe("@sightforge/contracts - Negative Fixture Validation", () => {
   });
 
   it("rejects semantic-segmentation artifact missing object key", () => {
-    const semanticFixture = JSON.parse(
-      fs.readFileSync(
-        path.join(fixturesDir, "semantic_segmentation.json"),
-        "utf-8",
-      ),
-    );
-    delete semanticFixture.artifact.key;
-    const res = validateResultDocument(semanticFixture);
+    const invalidArtifact = {
+      ...semanticSegFixture,
+      artifact: { ...semanticSegFixture.artifact },
+    } as Record<string, unknown>;
+    delete (invalidArtifact.artifact as Record<string, unknown>).key;
+    const res = validateResultDocument(invalidArtifact);
     expect(res.valid).toBe(false);
   });
 });
