@@ -1,6 +1,6 @@
 # Continuous Integration (CI) Runbook
 
-This runbook documents the SightForge CI pipeline architecture, path filtering mechanics, required status check configuration, and troubleshooting procedures.
+This runbook documents the SightForge CI pipeline architecture, path filtering mechanics, security & dependency scanning gates, required status check configuration, and troubleshooting procedures.
 
 ---
 
@@ -19,8 +19,8 @@ SightForge uses a polyglot monorepo (TypeScript and Python) with disjoint subtre
           ┌─────────┘       │        └──────────┐
           ▼                 ▼                   ▼
   ┌───────────────┐ ┌───────────────┐   ┌───────────────┐
-  │  typescript   │ │    python     │   │   terraform   │ (added in P5 U4)
-  │ (lint/type/t) │ │ (ruff/mypy/t) │   │ (fmt/validate)│
+  │  typescript   │ │    python     │   │ security-scan │ (Gitleaks, audit-secrets,
+  │ (lint/type/t) │ │ (ruff/mypy/t) │   │ (pnpm / pip)  │  pnpm/pip audit)
   └───────┬───────┘ └───────┬───────┘   └───────┬───────┘
           │                 │                   │
           └────────────┬────┴───────────────────┘
@@ -43,7 +43,8 @@ SightForge uses a polyglot monorepo (TypeScript and Python) with disjoint subtre
   1. The workflow triggers on all pull requests against `main`.
   2. `detect-changes` evaluates changed files and sets boolean outputs (`typescript`, `python`, `terraform`, etc.).
   3. Individual jobs run conditionally with `if: needs.detect-changes.outputs.<language> == 'true'`.
-  4. The `ci-aggregator` job runs with `if: always()`, inspects the conclusion (`.result`) of all dependent jobs, and:
+  4. The `security-scan` job runs unconditionally on all runs.
+  5. The `ci-aggregator` job runs with `if: always()`, inspects the conclusion (`.result`) of all dependent jobs, and:
      - **Fails (exit 1)** if any upstream job has a status of `failure` or `cancelled`.
      - **Succeeds (exit 0)** if all jobs are either `success` or `skipped`.
 
@@ -63,7 +64,17 @@ Changes under `packages/contracts/**` or `config/defaults.json` generate types c
 
 ---
 
-## 4. GitHub Branch Protection Setup
+## 4. Security & Secret Scanning (R87)
+
+SightForge maintains an uncompromised security perimeter:
+
+1. **Local Pre-commit Hook (`lefthook` + `scripts/audit-secrets.cjs`):** Scans all staged files for API keys, Cloudflare tokens, and high-entropy secret patterns before `git commit` completes.
+2. **CI Secret Scanner (`gitleaks/gitleaks-action`):** Evaluates full commit history (`fetch-depth: 0`) against `.gitleaks.toml` rules and fails the build immediately if any secret token is discovered.
+3. **Dependency Audits (`pnpm audit` & `pip-audit`):** Scans npm and PyPI supply chain dependency trees for known CVE vulnerabilities.
+
+---
+
+## 5. GitHub Branch Protection Setup
 
 To configure branch protection on GitHub for the repository:
 
@@ -75,22 +86,22 @@ To configure branch protection on GitHub for the repository:
    ```text
    CI Aggregator (Required Check)
    ```
-6. **Do NOT** select individual jobs (`typescript-checks`, `python-checks`, etc.) as required checks, as they are conditionally skipped depending on changed paths.
+6. **Do NOT** select individual jobs (`typescript-checks`, `python-checks`, `security-scan`) as required checks, as conditional checks are managed by the aggregator.
 7. Save the rule.
 
 ---
 
-## 5. Troubleshooting CI Failures
+## 6. Troubleshooting CI Failures
 
 ### Case A: Aggregator Failed (`❌ CI AGGREGATOR RESULT: FAILED`)
 
 1. Open the GitHub Actions run.
-2. Look for the red job (e.g. `typescript-checks` or `python-checks`).
-3. Inspect the failed step logs (e.g. TypeScript type error or pytest assertion failure).
+2. Look for the red job (e.g. `security-scan`, `typescript-checks`, or `python-checks`).
+3. Inspect the failed step logs.
 4. Fix the issue locally and push a new commit to the branch.
 
-### Case B: A job was unexpectedly skipped
+### Case B: Secret Scanner Alert
 
-1. Check the `detect-changes` step logs in the workflow summary.
-2. Verify if the modified files match the globs defined in `.github/workflows/ci.yml`.
-3. If new file paths or packages were added, update the `filters` block in `.github/workflows/ci.yml`.
+1. If Gitleaks fails in CI, inspect the detected pattern or file in the job log.
+2. If it is a legitimate credential, immediately rotate it out-of-band and rewrite the branch history before merging to public trunk.
+3. If it is a test mock or documentation example, adjust the pattern or add an entry in `.gitleaks.toml`.
