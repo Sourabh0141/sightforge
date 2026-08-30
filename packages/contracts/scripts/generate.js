@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { compileFromFile } from "json-schema-to-typescript";
+import prettier from "prettier";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,18 +17,21 @@ if (!fs.existsSync(generatedDir)) {
 async function generate() {
   console.log("Generating TypeScript types from JSON Schemas...");
 
+  const prettierConfig =
+    (await prettier.resolveConfig(path.join(generatedDir, "result.ts"))) || {};
+
   const resultTs = await compileFromFile(
     path.join(schemasDir, "result.schema.json"),
     {
       bannerComment:
         "/* eslint-disable */\n/**\n * Auto-generated from result.schema.json. Do not edit manually.\n */",
-      style: {
-        singleQuote: true,
-        semi: true,
-      },
     },
   );
-  fs.writeFileSync(path.join(generatedDir, "result.ts"), resultTs);
+  const formattedResult = await prettier.format(resultTs, {
+    ...prettierConfig,
+    parser: "typescript",
+  });
+  fs.writeFileSync(path.join(generatedDir, "result.ts"), formattedResult);
   console.log("Generated packages/contracts/src/generated/result.ts");
 
   const defaultsTs = await compileFromFile(
@@ -35,13 +39,13 @@ async function generate() {
     {
       bannerComment:
         "/* eslint-disable */\n/**\n * Auto-generated from defaults.schema.json. Do not edit manually.\n */",
-      style: {
-        singleQuote: true,
-        semi: true,
-      },
     },
   );
-  fs.writeFileSync(path.join(generatedDir, "defaults.ts"), defaultsTs);
+  const formattedDefaults = await prettier.format(defaultsTs, {
+    ...prettierConfig,
+    parser: "typescript",
+  });
+  fs.writeFileSync(path.join(generatedDir, "defaults.ts"), formattedDefaults);
   console.log("Generated packages/contracts/src/generated/defaults.ts");
 }
 

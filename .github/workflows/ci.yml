@@ -162,7 +162,7 @@ jobs:
 
       - name: Contract Drift Check (Python)
         run: |
-          uv run datamodel-codegen --input packages/contracts/schemas/result.schema.json --output services/inference/src/sightforge_inference/contracts/result.py --output-model-type pydantic_v2.BaseModel --target-python-version 3.11 --use-annotated
+          uv run datamodel-codegen --input packages/contracts/schemas/result.schema.json --output services/inference/src/sightforge_inference/contracts/result.py --output-model-type pydantic_v2.BaseModel --target-python-version 3.11 --use-annotated --disable-timestamp
           uv run ruff format services/inference
           git diff --exit-code services/inference/src/sightforge_inference/contracts
 

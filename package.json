@@ -10,7 +10,7 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "contracts:generate:ts": "pnpm --filter @sightforge/contracts generate",
-    "contracts:generate:py": "uv run datamodel-codegen --input packages/contracts/schemas/result.schema.json --output services/inference/src/sightforge_inference/contracts/result.py --output-model-type pydantic_v2.BaseModel --target-python-version 3.11 --use-annotated && uv run ruff format services/inference",
+    "contracts:generate:py": "uv run datamodel-codegen --input packages/contracts/schemas/result.schema.json --output services/inference/src/sightforge_inference/contracts/result.py --output-model-type pydantic_v2.BaseModel --target-python-version 3.11 --use-annotated --disable-timestamp && uv run ruff format services/inference",
     "contracts:generate": "pnpm run contracts:generate:ts && pnpm run contracts:generate:py",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
