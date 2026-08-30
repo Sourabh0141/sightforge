@@ -14,11 +14,13 @@
     "prepare": "lefthook install"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.22.0",
     "@cloudflare/workers-types": "^4.20250224.0",
     "lefthook": "^1.11.3",
     "prettier": "^3.5.2",
     "turbo": "^2.4.4",
     "typescript": "^5.7.3",
+    "vitest": "^4.1.11",
     "wrangler": "^3.111.0"
   },
   "engines": {
