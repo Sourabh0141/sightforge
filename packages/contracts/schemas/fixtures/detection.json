@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "job_id": "job_01j7abc123def4567890123456",
+  "task": "detection",
+  "model_variant": "yolo26n",
+  "mode": "per-frame",
+  "media_type": "image",
+  "summary": {
+    "source_fps": 0.0,
+    "sampled_fps": 0.0,
+    "frames_processed": 1,
+    "duration_ms": 0.0,
+    "inference_duration_ms": 42.5,
+    "cold_start_duration_ms": 310.0
+  },
+  "frames": [
+    {
+      "frame_index": 0,
+      "timestamp_ms": 0.0,
+      "instances": [
+        {
+          "box": [120.5, 85.0, 310.2, 450.8],
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.942
+        },
+        {
+          "box": [480.0, 210.5, 150.0, 95.2],
+          "class_id": 16,
+          "class_name": "dog",
+          "confidence": 0.887
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0.0",
+  "job_id": "job_01j7abc123def4567890123463",
+  "task": "detection",
+  "model_variant": "yolo26n",
+  "mode": "tracking",
+  "media_type": "video",
+  "summary": {
+    "source_fps": 30.0,
+    "sampled_fps": 10.0,
+    "frames_processed": 50,
+    "duration_ms": 5000.0,
+    "inference_duration_ms": 1120.0,
+    "cold_start_duration_ms": 0.0
+  },
+  "tracks": [
+    {
+      "track_id": 1,
+      "class_id": 0,
+      "class_name": "person",
+      "confidence_avg": 0.935,
+      "observations": [
+        {
+          "frame_index": 0,
+          "timestamp_ms": 0.0,
+          "box": [100.0, 150.0, 80.0, 200.0],
+          "confidence": 0.94
+        },
+        {
+          "frame_index": 1,
+          "timestamp_ms": 100.0,
+          "box": [105.0, 152.0, 80.0, 200.0],
+          "confidence": 0.93
+        }
+      ]
+    },
+    {
+      "track_id": 2,
+      "class_id": 2,
+      "class_name": "car",
+      "confidence_avg": 0.885,
+      "observations": [
+        {
+          "frame_index": 0,
+          "timestamp_ms": 0.0,
+          "box": [400.0, 300.0, 220.0, 150.0],
+          "confidence": 0.88
+        },
+        {
+          "frame_index": 1,
+          "timestamp_ms": 100.0,
+          "box": [410.0, 302.0, 220.0, 150.0],
+          "confidence": 0.89
+        }
+      ]
+    }
+  ]
+}

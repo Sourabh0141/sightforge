@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "job_id": "job_01j7abc123def4567890123457",
+  "task": "instance-segmentation",
+  "model_variant": "yolo26n",
+  "mode": "per-frame",
+  "media_type": "image",
+  "summary": {
+    "source_fps": 0.0,
+    "sampled_fps": 0.0,
+    "frames_processed": 1,
+    "duration_ms": 0.0,
+    "inference_duration_ms": 58.2,
+    "cold_start_duration_ms": 0.0
+  },
+  "frames": [
+    {
+      "frame_index": 0,
+      "timestamp_ms": 0.0,
+      "instances": [
+        {
+          "box": [50.0, 60.0, 200.0, 300.0],
+          "polygon": [
+            [50.0, 60.0],
+            [250.0, 60.0],
+            [250.0, 360.0],
+            [50.0, 360.0]
+          ],
+          "class_id": 2,
+          "class_name": "car",
+          "confidence": 0.915
+        }
+      ]
+    }
+  ]
+}

@@ -5,7 +5,14 @@ default:
 
 install:
     pnpm install
-    uv sync
+    uv sync --all-packages --all-groups --all-extras
+
+contracts:
+    pnpm contracts:generate
+
+contracts-drift-check:
+    pnpm contracts:generate
+    git diff --exit-code packages/contracts/src/generated services/inference/src/sightforge_inference/contracts
 
 typecheck:
     pnpm turbo run typecheck
