@@ -52,7 +52,7 @@ When a unit cites an R-ID you do not recognise, look it up in the requirements c
 
 ### ↓ the one deviation — three P5 units, pulled forward
 
-- [ ] 2 · **P5 U1** — CI skeleton with the always-running aggregator check
+- [x] 2 · **P5 U1** — CI skeleton with the always-running aggregator check
 - [ ] 3 · **P5 U2** — language pipelines: lint, typecheck, test for both languages
 - [ ] 4 · **P5 U3** — dependency and secret scanning in CI
 
