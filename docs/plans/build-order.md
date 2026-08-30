@@ -2,15 +2,15 @@
 
 Sequential working order for one developer, **plan by plan**. 35 steps. Tick as you go.
 
-| | Plan | File in `docs/plans/` |
-| --- | --- | --- |
-| **P1** | Foundation & Contracts | `2026-08-29-1145-sightforge-foundation-contracts-plan.md` |
-| **P2** | Edge API | `2026-08-29-1217-sightforge-edge-api-plan.md` |
-| **P3** | Inference Service | `2026-08-29-1320-sightforge-inference-service-plan.md` |
-| **P4** | Frontend | `2026-08-29-1321-sightforge-frontend-plan.md` |
-| **P5** | Delivery & Operations | `2026-08-29-1322-sightforge-delivery-operations-plan.md` |
-| — | Requirements contract (120 R-IDs) | `2026-08-29-1050-sightforge-cv-platform-plan.md` |
-| — | Design prompts | `docs/plans/sightforge-stitch-prompts.md` |
+|        | Plan                              | File in `docs/plans/`                                     |
+| ------ | --------------------------------- | --------------------------------------------------------- |
+| **P1** | Foundation & Contracts            | `2026-08-29-1145-sightforge-foundation-contracts-plan.md` |
+| **P2** | Edge API                          | `2026-08-29-1217-sightforge-edge-api-plan.md`             |
+| **P3** | Inference Service                 | `2026-08-29-1320-sightforge-inference-service-plan.md`    |
+| **P4** | Frontend                          | `2026-08-29-1321-sightforge-frontend-plan.md`             |
+| **P5** | Delivery & Operations             | `2026-08-29-1322-sightforge-delivery-operations-plan.md`  |
+| —      | Requirements contract (120 R-IDs) | `2026-08-29-1050-sightforge-cv-platform-plan.md`          |
+| —      | Design prompts                    | `docs/plans/sightforge-stitch-prompts.md`                 |
 
 **All 34 implementation units appear below exactly once**, in plan order, plus one non-unit step (the Stitch design block before P4). Day zero is unnumbered and comes first.
 
@@ -40,15 +40,15 @@ When a unit cites an R-ID you do not recognise, look it up in the requirements c
 
 ## Day zero — one hour, before any code
 
-- [ ] Create the dedicated Cloudflare account — **do this first**, there is a 7-day tenure gate before you can create additional free accounts
-- [ ] Create the Modal workspace and issue its proxy-token pair
-- [ ] Create the GitHub repo, public, with the AGPL-3.0 licence committed
+- [x] Create the dedicated Cloudflare account — **do this first**, there is a 7-day tenure gate before you can create additional free accounts
+- [x] Create the Modal workspace and issue its proxy-token pair
+- [x] Create the GitHub repo, public, with the AGPL-3.0 licence committed
 
 ---
 
 ## P1 — Foundation & Contracts
 
-- [ ] 1 · **P1 U1** — monorepo scaffolding, pnpm + uv workspaces, toolchain, Worker placeholders
+- [x] 1 · **P1 U1** — monorepo scaffolding, pnpm + uv workspaces, toolchain, Worker placeholders
 
 ### ↓ the one deviation — three P5 units, pulled forward
 

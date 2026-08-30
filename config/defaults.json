@@ -1,0 +1,68 @@
+{
+  "auth": {
+    "accessTokenTtlSeconds": 900,
+    "refreshTokenTtlDays": 30,
+    "argon2id": {
+      "memoryKiB": 19456,
+      "iterations": 2,
+      "parallelism": 1,
+      "version": "0x13"
+    }
+  },
+  "media": {
+    "maxImageSizeBytes": 10485760,
+    "maxVideoSizeBytes": 52428800,
+    "maxVideoDurationSeconds": 30,
+    "maxImageDimensionPixels": 4096,
+    "maxImageTotalPixels": 16777216,
+    "allowedImageMimeTypes": ["image/jpeg", "image/png", "image/webp"],
+    "allowedVideoMimeTypes": ["video/mp4"]
+  },
+  "video": {
+    "defaultPerFrameSamplingFps": 5,
+    "minPerFrameSamplingFps": 2,
+    "maxPerFrameSamplingFps": 10,
+    "maxTrackingFps": 30
+  },
+  "retention": {
+    "completedInputMediaDays": 7,
+    "failedInputMediaDays": 14,
+    "completedResultsDays": 30,
+    "multipartUploadExpiryDays": 1
+  },
+  "quotas": {
+    "defaultUserDailyJobsQuota": 50,
+    "authLockoutMaxAttempts": 5,
+    "authLockoutWindowSeconds": 900,
+    "monthlySpendWarningUsd": 20.0,
+    "monthlySpendCriticalUsd": 28.0
+  },
+  "models": {
+    "defaultVariant": "nano",
+    "availableVariants": ["nano", "small"],
+    "defaultVariantPerTask": {
+      "detection": "yolo26n",
+      "instance_segmentation": "yolo26n",
+      "semantic_segmentation": "yolo26n",
+      "classification": "yolo26n",
+      "pose": "yolo26n",
+      "oriented_bounding_box": "yolo26n",
+      "depth": "yolo26n"
+    },
+    "coldStartBudgetSeconds": 20
+  },
+  "freePlanCeilings": {
+    "workerCpuPerInvocationMs": 10,
+    "workerRequestsPerDay": 100000,
+    "subrequestsPerInvocation": 50,
+    "cronTriggers": 5,
+    "maxScriptGzipBytes": 3145728,
+    "d1ReadsPerDay": 5000000,
+    "d1WritesPerDay": 100000,
+    "d1StorageBytes": 524288000,
+    "queueOperationsPerDay": 10000,
+    "r2StorageBytes": 10737418240,
+    "durableObjectRequestsPerDay": 100000,
+    "durableObjectDurationGbSecondsPerDay": 13000
+  }
+}

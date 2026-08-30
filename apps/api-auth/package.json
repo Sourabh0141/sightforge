@@ -1,0 +1,19 @@
+{
+  "name": "sightforge-api-auth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"sightforge-api-auth lint ok\"",
+    "test": "echo \"sightforge-api-auth test ok\"",
+    "build": "echo \"sightforge-api-auth build ok\""
+  },
+  "dependencies": {
+    "@sightforge/worker-kit": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250224.0",
+    "typescript": "^5.7.3"
+  }
+}

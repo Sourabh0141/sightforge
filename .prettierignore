@@ -1,0 +1,13 @@
+node_modules/
+.pnpm-store/
+pnpm-lock.yaml
+.venv/
+.wrangler/
+.mf/
+.turbo/
+.next/
+dist/
+build/
+out/
+.agents/
+uv.lock
