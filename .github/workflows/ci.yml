@@ -55,6 +55,48 @@ jobs:
               - 'README.md'
               - 'LICENSE'
 
+  security-scan:
+    name: Security & Secret Scan (Gitleaks, Audits)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository (Full History)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks Secret Scanner
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+      - name: Run Local Regex Secret Audit
+        run: node scripts/audit-secrets.cjs
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Audit Node / TypeScript Dependencies
+        run: pnpm audit --audit-level=high || true
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.8.11"
+          enable-cache: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Audit Python Dependencies
+        run: |
+          uv sync --locked --all-packages --all-groups --all-extras
+          uv run pip-audit
+
   typescript-checks:
     name: TypeScript & Worker Checks (Lint, Types, Tests, Build)
     needs: detect-changes
@@ -130,6 +172,7 @@ jobs:
     name: CI Aggregator (Required Check)
     needs:
       - detect-changes
+      - security-scan
       - typescript-checks
       - python-checks
     if: always()
@@ -142,12 +185,14 @@ jobs:
           echo "           CI AGGREGATOR EVALUATION               "
           echo "=================================================="
           echo "detect-changes:     ${{ needs.detect-changes.result }}"
+          echo "security-scan:      ${{ needs.security-scan.result }}"
           echo "typescript-checks:  ${{ needs.typescript-checks.result }}"
           echo "python-checks:      ${{ needs.python-checks.result }}"
           echo "=================================================="
 
           RESULTS=(
             "${{ needs.detect-changes.result }}"
+            "${{ needs.security-scan.result }}"
             "${{ needs.typescript-checks.result }}"
             "${{ needs.python-checks.result }}"
           )
