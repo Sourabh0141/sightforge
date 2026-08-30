@@ -11,3 +11,6 @@ build/
 out/
 .agents/
 uv.lock
+docs/plans/2026-*.md
+docs/plans/sightforge-stitch-prompts.md
+docs/requirements/

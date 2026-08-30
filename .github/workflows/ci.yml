@@ -1,0 +1,157 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  detect-changes:
+    name: Detect Changed Paths
+    runs-on: ubuntu-latest
+    outputs:
+      contracts: ${{ steps.filter.outputs.contracts }}
+      typescript: ${{ steps.filter.outputs.typescript == 'true' || steps.filter.outputs.contracts == 'true' }}
+      python: ${{ steps.filter.outputs.python == 'true' || steps.filter.outputs.contracts == 'true' }}
+      terraform: ${{ steps.filter.outputs.terraform }}
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Paths Filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            contracts:
+              - 'packages/contracts/**'
+              - 'config/defaults.json'
+            typescript:
+              - 'apps/**'
+              - 'packages/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'tsconfig.base.json'
+              - 'turbo.json'
+            python:
+              - 'services/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            terraform:
+              - 'infra/terraform/**'
+            docs:
+              - 'docs/**'
+              - 'README.md'
+              - 'LICENSE'
+
+  # Language and scan jobs will be fully populated in P5 U2, P5 U3, P5 U4
+  typescript-checks:
+    name: TypeScript Checks (Lint, Types, Tests)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.typescript == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run TypeScript checks
+        run: pnpm turbo run lint typecheck test build
+
+  python-checks:
+    name: Python Checks (Ruff, Mypy, Pytest)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.8.11"
+          enable-cache: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run Python checks
+        run: |
+          uv sync --all-extras
+          uv run ruff check services/inference
+          uv run mypy services/inference
+          uv run pytest services/inference
+
+  # The unconditional Aggregator check (Single Required Status Check for Branch Protection)
+  ci-aggregator:
+    name: CI Aggregator (Required Check)
+    needs:
+      - detect-changes
+      - typescript-checks
+      - python-checks
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate Upstream Job Results
+        shell: bash
+        run: |
+          echo "=================================================="
+          echo "           CI AGGREGATOR EVALUATION               "
+          echo "=================================================="
+          echo "detect-changes:     ${{ needs.detect-changes.result }}"
+          echo "typescript-checks:  ${{ needs.typescript-checks.result }}"
+          echo "python-checks:      ${{ needs.python-checks.result }}"
+          echo "=================================================="
+
+          RESULTS=(
+            "${{ needs.detect-changes.result }}"
+            "${{ needs.typescript-checks.result }}"
+            "${{ needs.python-checks.result }}"
+          )
+
+          FAILED=0
+          for result in "${RESULTS[@]}"; do
+            if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
+              echo "❌ Error: Found failed or cancelled job result: $result"
+              FAILED=1
+            fi
+          done
+
+          if [ $FAILED -ne 0 ]; then
+            echo ""
+            echo "❌ CI AGGREGATOR RESULT: FAILED"
+            echo "One or more required upstream checks failed or were cancelled."
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ CI AGGREGATOR RESULT: SUCCESS"
+          echo "All checks either passed successfully or were legitimately skipped."
+          exit 0
