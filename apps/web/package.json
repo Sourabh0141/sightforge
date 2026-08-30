@@ -1,0 +1,16 @@
+{
+  "name": "sightforge-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"sightforge-web lint ok\"",
+    "test": "echo \"sightforge-web test ok\"",
+    "build": "echo \"sightforge-web build ok\""
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250224.0",
+    "typescript": "^5.7.3"
+  }
+}

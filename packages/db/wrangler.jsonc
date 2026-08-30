@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sightforge-db-migrations",
+  "compatibility_date": "2026-08-29",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sightforge-d1-prod",
+      "database_id": "placeholder-d1-id",
+      "migrations_dir": "./migrations"
+    }
+  ]
+}

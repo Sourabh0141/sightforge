@@ -1,0 +1,16 @@
+{
+  "name": "sightforge-events",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"sightforge-events lint ok\"",
+    "test": "echo \"sightforge-events test ok\"",
+    "build": "echo \"sightforge-events build ok\""
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250224.0",
+    "typescript": "^5.7.3"
+  }
+}
