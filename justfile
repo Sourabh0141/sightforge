@@ -34,3 +34,22 @@ build:
     pnpm turbo run build
 
 check: lint typecheck test
+
+deploy:
+    node infra/scripts/deploy.cjs
+
+deploy-dry-run:
+    node infra/scripts/deploy.cjs --dry-run
+
+deploy-infra:
+    terraform -chdir=infra/terraform/environments/prod apply
+
+deploy-migrations:
+    pnpm --filter @sightforge/db wrangler d1 migrations apply sightforge-d1-prod --remote
+
+deploy-workers:
+    pnpm --filter sightforge-web exec wrangler deploy
+    pnpm --filter sightforge-api-auth exec wrangler deploy
+    pnpm --filter sightforge-api-jobs exec wrangler deploy
+    pnpm --filter sightforge-events exec wrangler deploy
+    pnpm --filter sightforge-scheduler exec wrangler deploy
