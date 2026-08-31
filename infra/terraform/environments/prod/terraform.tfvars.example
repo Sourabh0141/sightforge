@@ -1,0 +1,16 @@
+﻿# Cloudflare Account ID (non-secret identifier found in Cloudflare Dashboard)
+cloudflare_account_id = "0123456789abcdef0123456789abcdef"
+
+# Deployment Environment Suffix
+environment = "prod"
+
+# Allowed CORS Origins for Direct Browser Uploads and Result Reads
+cors_allowed_origins = [
+  "https://sightforge.app",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000"
+]
+
+# R2 Lifecycle Retention Settings (Days)
+media_lifecycle_multipart_abort_days = 1
+media_lifecycle_stale_expiry_days    = 30
