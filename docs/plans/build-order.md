@@ -63,7 +63,7 @@ When a unit cites an R-ID you do not recognise, look it up in the requirements c
 ### ↑ back to plan order
 
 - [x] 5 · **P1 U2** — result contract package, generating TypeScript + Pydantic
-- [ ] 6 · **P1 U3** — database package, schema, migrations
+- [x] 6 · **P1 U3** — database package, schema, migrations
 - [ ] 7 · **P1 U4** — account bootstrap, secret inventory, the one-time Durable Object dance (four edits, by hand, once)
 - [ ] 8 · **P1 U5** — Terraform root and Worker module
 - [ ] 9 · **P1 U6** — full deploy sequence, end to end against the real account
