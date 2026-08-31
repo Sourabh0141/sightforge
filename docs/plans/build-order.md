@@ -66,7 +66,7 @@ When a unit cites an R-ID you do not recognise, look it up in the requirements c
 - [x] 6 · **P1 U3** — database package, schema, migrations
 - [x] 7 · **P1 U4** — account bootstrap, secret inventory, the one-time Durable Object dance (four edits, by hand, once)
 - [x] 8 · **P1 U5** — Terraform root and Worker module
-- [ ] 9 · **P1 U6** — full deploy sequence, end to end against the real account
+- [x] 9 · **P1 U6** — full deploy sequence, end to end against the real account
 
 **Gate:** the deploy sequence completes; all five Workers respond at their routes with their placeholders; a follow-up `terraform plan` reports no drift; a second run is a no-op.
 
