@@ -9,9 +9,16 @@
     "typecheck": "tsc --noEmit",
     "lint": "echo \"@sightforge/db lint ok\"",
     "test": "vitest run",
-    "build": "echo \"@sightforge/db build ok\""
+    "build": "echo \"@sightforge/db build ok\"",
+    "generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.38.4"
   },
   "devDependencies": {
+    "@libsql/client": "^0.14.0",
+    "@types/node": "^22.13.5",
+    "drizzle-kit": "^0.30.4",
     "typescript": "^5.7.3",
     "vitest": "^4.1.11"
   }
