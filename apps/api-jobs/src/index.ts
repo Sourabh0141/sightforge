@@ -32,6 +32,10 @@ import {
   mintLiveStatusTicket,
   projectStateToJobRoom,
 } from "./transitions.js";
+import { JobRoom } from "./job-room.js";
+
+export { JobRoom };
+export { Counter } from "@sightforge/worker-kit";
 
 export default {
   async fetch(request: Request, env: JobsWorkerEnv): Promise<Response> {
@@ -49,8 +53,22 @@ export default {
       });
     }
 
-    // Authenticated API Routes
+    // Authenticated API Routes & WebSocket Upgrades
     if (path.startsWith("/jobs") || path === "/account") {
+      // 0. WebSocket Live Status Handshake (R29, R115, KTD5)
+      const liveMatch = path.match(/^\/jobs\/([a-zA-Z0-9_-]+)\/(live|ws)$/);
+      if (
+        liveMatch &&
+        (method === "GET" ||
+          request.headers.get("Upgrade")?.toLowerCase() === "websocket")
+      ) {
+        const jobId = liveMatch[1]!;
+        if (env.JOB_ROOM) {
+          const roomStub = env.JOB_ROOM.get(env.JOB_ROOM.idFromName(jobId));
+          return roomStub.fetch(request);
+        }
+      }
+
       // 1. POST /jobs - Create Job with Idempotency & Presigned Upload
       if (path === "/jobs" && method === "POST") {
         return authenticatedChain(request, env, async (ctx) =>
@@ -112,10 +130,17 @@ export default {
         );
       }
 
-      // 8. GET /jobs/:id - Get Job Metadata
+      // 8. GET /jobs/:id - Get Job Metadata or WebSocket Upgrade
       const jobMatch = path.match(/^\/jobs\/([a-zA-Z0-9_-]+)$/);
       if (jobMatch && method === "GET") {
         const jobId = jobMatch[1]!;
+        if (
+          request.headers.get("Upgrade")?.toLowerCase() === "websocket" &&
+          env.JOB_ROOM
+        ) {
+          const roomStub = env.JOB_ROOM.get(env.JOB_ROOM.idFromName(jobId));
+          return roomStub.fetch(request);
+        }
         return authenticatedChain(request, env, async (ctx) =>
           handleGetJobDetail(ctx, env, jobId),
         );
