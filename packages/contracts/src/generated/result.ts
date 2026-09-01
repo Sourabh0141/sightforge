@@ -49,12 +49,6 @@ export type SightForgeResultDocument = {
   | SemanticSegmentationResult
   | DepthResult
 );
-export type DetectionResult = {
-  task?: "detection";
-  frames?: DetectionFrame[];
-  tracks?: DetectionTrack[];
-  [k: string]: unknown;
-} & DetectionResult1;
 /**
  * [x_min, y_min, width, height] normalized or pixel coordinates
  *
@@ -62,21 +56,6 @@ export type DetectionResult = {
  * @maxItems 4
  */
 export type BoundingBox = [number, number, number, number];
-export type DetectionResult1 =
-  | {
-      mode?: "per-frame";
-      [k: string]: unknown;
-    }
-  | {
-      mode?: "tracking";
-      [k: string]: unknown;
-    };
-export type InstanceSegmentationResult = {
-  task?: "instance-segmentation";
-  frames?: InstanceSegmentationFrame[];
-  tracks?: InstanceSegmentationTrack[];
-  [k: string]: unknown;
-} & InstanceSegmentationResult1;
 /**
  * [x, y]
  *
@@ -84,36 +63,6 @@ export type InstanceSegmentationResult = {
  * @maxItems 2
  */
 export type CoordinatePoint = [number, number];
-export type InstanceSegmentationResult1 =
-  | {
-      mode?: "per-frame";
-      [k: string]: unknown;
-    }
-  | {
-      mode?: "tracking";
-      [k: string]: unknown;
-    };
-export type PoseResult = {
-  task?: "pose";
-  frames?: PoseFrame[];
-  tracks?: PoseTrack[];
-  [k: string]: unknown;
-} & PoseResult1;
-export type PoseResult1 =
-  | {
-      mode?: "per-frame";
-      [k: string]: unknown;
-    }
-  | {
-      mode?: "tracking";
-      [k: string]: unknown;
-    };
-export type ObbResult = {
-  task?: "obb";
-  frames?: ObbFrame[];
-  tracks?: ObbTrack[];
-  [k: string]: unknown;
-} & ObbResult1;
 /**
  * [center_x, center_y, width, height, angle_degrees]
  *
@@ -121,15 +70,6 @@ export type ObbResult = {
  * @maxItems 5
  */
 export type RotatedBoundingBox = [number, number, number, number, number];
-export type ObbResult1 =
-  | {
-      mode?: "per-frame";
-      [k: string]: unknown;
-    }
-  | {
-      mode?: "tracking";
-      [k: string]: unknown;
-    };
 
 export interface ProcessingSummary {
   source_fps: number;
@@ -138,6 +78,12 @@ export interface ProcessingSummary {
   duration_ms: number;
   inference_duration_ms: number;
   cold_start_duration_ms: number;
+}
+export interface DetectionResult {
+  task?: "detection";
+  frames?: DetectionFrame[];
+  tracks?: DetectionTrack[];
+  [k: string]: unknown;
 }
 export interface DetectionFrame {
   frame_index: number;
@@ -162,6 +108,12 @@ export interface DetectionTrackObservation {
   timestamp_ms: number;
   box: BoundingBox;
   confidence: number;
+}
+export interface InstanceSegmentationResult {
+  task?: "instance-segmentation";
+  frames?: InstanceSegmentationFrame[];
+  tracks?: InstanceSegmentationTrack[];
+  [k: string]: unknown;
 }
 export interface InstanceSegmentationFrame {
   frame_index: number;
@@ -205,6 +157,12 @@ export interface InstanceSegmentationTrackObservation {
   ];
   confidence: number;
 }
+export interface PoseResult {
+  task?: "pose";
+  frames?: PoseFrame[];
+  tracks?: PoseTrack[];
+  [k: string]: unknown;
+}
 export interface PoseFrame {
   frame_index: number;
   timestamp_ms: number;
@@ -244,6 +202,12 @@ export interface PoseTrackObservation {
    */
   keypoints: [PoseKeypoint, ...PoseKeypoint[]];
   confidence: number;
+}
+export interface ObbResult {
+  task?: "obb";
+  frames?: ObbFrame[];
+  tracks?: ObbTrack[];
+  [k: string]: unknown;
 }
 export interface ObbFrame {
   frame_index: number;
