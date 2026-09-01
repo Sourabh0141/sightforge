@@ -1,8 +1,10 @@
 /**
- * sightforge-events Worker placeholder (Queue consumer & Modal callback)
+ * sightforge-events Worker entrypoint (Queue consumer & Modal callback)
  */
+import type { EventsWorkerEnv } from "@sightforge/worker-kit";
+
 export default {
-  async fetch(_request: Request): Promise<Response> {
+  async fetch(_request: Request, _env?: EventsWorkerEnv): Promise<Response> {
     return new Response(
       JSON.stringify({ service: "sightforge-events", status: "ready" }),
       {
@@ -11,8 +13,10 @@ export default {
     );
   },
 
-  async queue(batch: MessageBatch<unknown>): Promise<void> {
-    // Queue consumer placeholder
+  async queue(
+    batch: MessageBatch<unknown>,
+    _env?: EventsWorkerEnv,
+  ): Promise<void> {
     console.log(
       `Processing queue batch with ${batch.messages.length} messages`,
     );

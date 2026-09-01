@@ -3,5 +3,14 @@
   "name": "sightforge-web-prod",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-29",
-  "compatibility_flags": ["nodejs_compat"]
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "single-page-application"
+  },
+  "vars": {
+    "ENVIRONMENT": "prod"
+  }
 }

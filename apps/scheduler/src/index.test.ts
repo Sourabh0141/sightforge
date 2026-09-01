@@ -19,7 +19,7 @@ describe("sightforge-scheduler worker", () => {
     } as ScheduledEvent;
 
     await expect(
-      worker.scheduled(event, {}, {} as ExecutionContext),
+      worker.scheduled(event, {} as any, {} as ExecutionContext),
     ).resolves.toBeUndefined();
   });
 });

@@ -9,6 +9,9 @@
     "test": "vitest run",
     "build": "echo \"sightforge-events build ok\""
   },
+  "dependencies": {
+    "@sightforge/worker-kit": "workspace:*"
+  },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250224.0",
     "typescript": "^5.7.3",

@@ -1,7 +1,9 @@
 /**
  * @sightforge/worker-kit
- * Shared utilities, middleware, and Durable Object stub targets for Cloudflare Workers.
+ * Shared utilities, middleware, types, and Durable Object stub targets for Cloudflare Workers.
  */
+
+export * from "./types.js";
 
 // Stub Durable Object classes for initial migrations & binding targets
 export class Counter {
