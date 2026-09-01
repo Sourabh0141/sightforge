@@ -3,5 +3,48 @@
   "name": "sightforge-api-jobs-prod",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-29",
-  "compatibility_flags": ["nodejs_compat"]
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sightforge-d1-prod",
+      "database_id": "sightforge-d1-prod"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "sightforge-media-prod"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "JOBS_QUEUE",
+        "queue": "sightforge-jobs-queue-prod"
+      }
+    ]
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "COUNTER",
+        "class_name": "Counter"
+      },
+      {
+        "name": "JOB_ROOM",
+        "class_name": "JobRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["Counter", "JobRoom"]
+    }
+  ],
+  "vars": {
+    "ENVIRONMENT": "prod",
+    "FRONTEND_ORIGIN": "https://sightforge.app"
+  }
 }

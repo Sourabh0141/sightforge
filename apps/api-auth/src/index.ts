@@ -1,12 +1,10 @@
 /**
- * sightforge-api-auth Worker placeholder
+ * sightforge-api-auth Worker entrypoint
  */
-import { Counter } from "@sightforge/worker-kit";
-
-export { Counter };
+import type { AuthWorkerEnv } from "@sightforge/worker-kit";
 
 export default {
-  async fetch(_request: Request): Promise<Response> {
+  async fetch(_request: Request, _env?: AuthWorkerEnv): Promise<Response> {
     return new Response(
       JSON.stringify({ service: "sightforge-api-auth", status: "ready" }),
       {

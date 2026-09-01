@@ -3,5 +3,40 @@
   "name": "sightforge-events-prod",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-29",
-  "compatibility_flags": ["nodejs_compat"]
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sightforge-d1-prod",
+      "database_id": "sightforge-d1-prod"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "sightforge-media-prod"
+    }
+  ],
+  "queues": {
+    "consumers": [
+      {
+        "queue": "sightforge-jobs-queue-prod",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3
+      }
+    ]
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "JOB_ROOM",
+        "class_name": "JobRoom",
+        "script_name": "sightforge-api-jobs-prod"
+      }
+    ]
+  },
+  "vars": {
+    "ENVIRONMENT": "prod"
+  }
 }

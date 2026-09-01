@@ -1,12 +1,13 @@
 /**
- * sightforge-api-jobs Worker placeholder
+ * sightforge-api-jobs Worker entrypoint
  */
-import { JobRoom } from "@sightforge/worker-kit";
+import type { JobsWorkerEnv } from "@sightforge/worker-kit";
+import { Counter, JobRoom } from "@sightforge/worker-kit";
 
-export { JobRoom };
+export { Counter, JobRoom };
 
 export default {
-  async fetch(_request: Request): Promise<Response> {
+  async fetch(_request: Request, _env?: JobsWorkerEnv): Promise<Response> {
     return new Response(
       JSON.stringify({ service: "sightforge-api-jobs", status: "ready" }),
       {

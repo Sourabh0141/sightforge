@@ -66,6 +66,10 @@ importers:
         version: 4.1.11(@types/node@26.4.0)(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.1))
 
   apps/events:
+    dependencies:
+      '@sightforge/worker-kit':
+        specifier: workspace:*
+        version: link:../../packages/worker-kit
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20250224.0
@@ -78,6 +82,10 @@ importers:
         version: 4.1.11(@types/node@26.4.0)(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.1))
 
   apps/scheduler:
+    dependencies:
+      '@sightforge/worker-kit':
+        specifier: workspace:*
+        version: link:../../packages/worker-kit
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20250224.0
@@ -90,6 +98,10 @@ importers:
         version: 4.1.11(@types/node@26.4.0)(vite@8.2.2(@types/node@26.4.0)(esbuild@0.28.1))
 
   apps/web:
+    dependencies:
+      '@sightforge/worker-kit':
+        specifier: workspace:*
+        version: link:../../packages/worker-kit
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20250224.0

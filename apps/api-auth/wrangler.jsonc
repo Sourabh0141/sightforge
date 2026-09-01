@@ -3,5 +3,25 @@
   "name": "sightforge-api-auth-prod",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-29",
-  "compatibility_flags": ["nodejs_compat"]
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sightforge-d1-prod",
+      "database_id": "sightforge-d1-prod"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "COUNTER",
+        "class_name": "Counter",
+        "script_name": "sightforge-api-jobs-prod"
+      }
+    ]
+  },
+  "vars": {
+    "ENVIRONMENT": "prod",
+    "FRONTEND_ORIGIN": "https://sightforge.app"
+  }
 }

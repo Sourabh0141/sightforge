@@ -4,7 +4,23 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-08-29",
   "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sightforge-d1-prod",
+      "database_id": "sightforge-d1-prod"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "sightforge-media-prod"
+    }
+  ],
   "triggers": {
-    "crons": ["*/5 * * * *"]
+    "crons": ["*/15 * * * *", "0 0 * * *"]
+  },
+  "vars": {
+    "ENVIRONMENT": "prod"
   }
 }
