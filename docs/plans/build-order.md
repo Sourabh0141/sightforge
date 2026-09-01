@@ -92,7 +92,7 @@ When a unit cites an R-ID you do not recognise, look it up in the requirements c
 
 ## P3 — Inference Service
 
-- [ ] 17 · **P3 U1** — Modal App, images, volumes
+- [x] 17 · **P3 U1** — Modal App, images, volumes
 - [ ] 18 · **P3 U2** — model adapter boundary
 - [ ] 19 · **P3 U3** — the seven task implementations ← **first real model output**
 - [ ] 20 · **P3 U4** — CPU function: probe, decode, frame extraction
