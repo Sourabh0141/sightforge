@@ -96,7 +96,7 @@ When a unit cites an R-ID you do not recognise, look it up in the requirements c
 - [x] 18 · **P3 U2** — model adapter boundary
 - [x] 19 · **P3 U3** — the seven task implementations ← **first real model output**
 - [x] 20 · **P3 U4** — CPU function: probe, decode, frame extraction
-- [ ] 21 · **P3 U5** — GPU class and the two video pipelines
+- [x] 21 · **P3 U5** — GPU class and the two video pipelines
 - [ ] 22 · **P3 U6** — contract wiring: trigger, progress, completion
 - [ ] 23 · **P3 U7** — permissive second adapter, cost benchmark
 
