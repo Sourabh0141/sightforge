@@ -81,7 +81,7 @@ When a unit cites an R-ID you do not recognise, look it up in the requirements c
 - [x] 12 · **P2 U3** — authentication Worker
 - [x] 13 · **P2 U4** — job lifecycle Worker _(six subsystems; budget accordingly)_
 - [x] 14 · **P2 U5** — JobRoom live status Durable Object
-- [ ] 15 · **P2 U6** — upload validation + inference callbacks
+- [x] 15 · **P2 U6** — upload validation + inference callbacks
 - [ ] 16 · **P2 U7** — scheduled maintenance Worker
 
 **Gate:** full create → upload → track → retrieve → delete cycle passes with inference stubbed, plus **one live authenticated trigger call** against Modal to disconfirm the auth and payload assumptions before P3 commits to them.
