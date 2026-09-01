@@ -23,6 +23,15 @@ from .config import (
     ModelVariant,
     VisionTask,
 )
+from .media import (
+    FrameEntry,
+    FrameManifest,
+    MediaProbeResult,
+    cleanup_job_frames,
+    extract_frames,
+    fetch_media_conditional,
+    probe_media,
+)
 from .tasks import (
     BaseYOLOAdapter,
     ClassificationAdapter,
@@ -72,4 +81,11 @@ __all__ = [
     "compute_file_sha256",
     "verify_weight_checksum",
     "get_weight_path",
+    "MediaProbeResult",
+    "FrameEntry",
+    "FrameManifest",
+    "fetch_media_conditional",
+    "probe_media",
+    "extract_frames",
+    "cleanup_job_frames",
 ]
