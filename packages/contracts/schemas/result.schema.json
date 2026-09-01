@@ -63,6 +63,32 @@
     { "$ref": "#/definitions/SemanticSegmentationResult" },
     { "$ref": "#/definitions/DepthResult" }
   ],
+  "allOf": [
+    {
+      "if": { "properties": { "task": { "const": "detection" } } },
+      "then": {
+        "anyOf": [{ "required": ["frames"] }, { "required": ["tracks"] }]
+      }
+    },
+    {
+      "if": { "properties": { "task": { "const": "instance-segmentation" } } },
+      "then": {
+        "anyOf": [{ "required": ["frames"] }, { "required": ["tracks"] }]
+      }
+    },
+    {
+      "if": { "properties": { "task": { "const": "pose" } } },
+      "then": {
+        "anyOf": [{ "required": ["frames"] }, { "required": ["tracks"] }]
+      }
+    },
+    {
+      "if": { "properties": { "task": { "const": "obb" } } },
+      "then": {
+        "anyOf": [{ "required": ["frames"] }, { "required": ["tracks"] }]
+      }
+    }
+  ],
   "definitions": {
     "ProcessingSummary": {
       "type": "object",
@@ -198,17 +224,7 @@
           "type": "array",
           "items": { "$ref": "#/definitions/DetectionTrack" }
         }
-      },
-      "oneOf": [
-        {
-          "properties": { "mode": { "const": "per-frame" } },
-          "required": ["frames"]
-        },
-        {
-          "properties": { "mode": { "const": "tracking" } },
-          "required": ["tracks"]
-        }
-      ]
+      }
     },
 
     "InstanceSegmentationInstance": {
@@ -297,17 +313,7 @@
           "type": "array",
           "items": { "$ref": "#/definitions/InstanceSegmentationTrack" }
         }
-      },
-      "oneOf": [
-        {
-          "properties": { "mode": { "const": "per-frame" } },
-          "required": ["frames"]
-        },
-        {
-          "properties": { "mode": { "const": "tracking" } },
-          "required": ["tracks"]
-        }
-      ]
+      }
     },
 
     "PoseInstance": {
@@ -394,17 +400,7 @@
           "type": "array",
           "items": { "$ref": "#/definitions/PoseTrack" }
         }
-      },
-      "oneOf": [
-        {
-          "properties": { "mode": { "const": "per-frame" } },
-          "required": ["frames"]
-        },
-        {
-          "properties": { "mode": { "const": "tracking" } },
-          "required": ["tracks"]
-        }
-      ]
+      }
     },
 
     "ObbInstance": {
@@ -475,17 +471,7 @@
           "type": "array",
           "items": { "$ref": "#/definitions/ObbTrack" }
         }
-      },
-      "oneOf": [
-        {
-          "properties": { "mode": { "const": "per-frame" } },
-          "required": ["frames"]
-        },
-        {
-          "properties": { "mode": { "const": "tracking" } },
-          "required": ["tracks"]
-        }
-      ]
+      }
     },
 
     "ClassificationFrame": {

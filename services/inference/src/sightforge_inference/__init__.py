@@ -23,6 +23,17 @@ from .config import (
     ModelVariant,
     VisionTask,
 )
+from .tasks import (
+    BaseYOLOAdapter,
+    ClassificationAdapter,
+    DepthAdapter,
+    DetectionAdapter,
+    InstanceSegmentationAdapter,
+    ObbAdapter,
+    PoseAdapter,
+    SemanticSegmentationAdapter,
+    get_task_adapter,
+)
 from .weights import (
     compute_file_sha256,
     get_weight_path,
@@ -49,6 +60,15 @@ __all__ = [
     "FRAMES_MOUNT_PATH",
     "VisionTask",
     "ModelVariant",
+    "BaseYOLOAdapter",
+    "DetectionAdapter",
+    "InstanceSegmentationAdapter",
+    "ClassificationAdapter",
+    "PoseAdapter",
+    "ObbAdapter",
+    "SemanticSegmentationAdapter",
+    "DepthAdapter",
+    "get_task_adapter",
     "compute_file_sha256",
     "verify_weight_checksum",
     "get_weight_path",

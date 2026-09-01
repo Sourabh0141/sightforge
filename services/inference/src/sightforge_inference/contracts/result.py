@@ -133,22 +133,10 @@ class DetectionTrack(BaseModel):
     observations: list[DetectionTrackObservation]
 
 
-class DetectionResult1(BaseModel):
-    task: Literal["detection"] | None = None
-    frames: list[DetectionFrame]
-    tracks: list[DetectionTrack] | None = None
-    mode: Literal["per-frame"] | None = None
-
-
-class DetectionResult2(BaseModel):
+class DetectionResult(BaseModel):
     task: Literal["detection"] | None = None
     frames: list[DetectionFrame] | None = None
-    tracks: list[DetectionTrack]
-    mode: Literal["tracking"] | None = None
-
-
-class DetectionResult(RootModel[DetectionResult1 | DetectionResult2]):
-    root: DetectionResult1 | DetectionResult2
+    tracks: list[DetectionTrack] | None = None
 
 
 class InstanceSegmentationInstance(BaseModel):
@@ -193,24 +181,10 @@ class InstanceSegmentationTrack(BaseModel):
     observations: list[InstanceSegmentationTrackObservation]
 
 
-class InstanceSegmentationResult1(BaseModel):
-    task: Literal["instance-segmentation"] | None = None
-    frames: list[InstanceSegmentationFrame]
-    tracks: list[InstanceSegmentationTrack] | None = None
-    mode: Literal["per-frame"] | None = None
-
-
-class InstanceSegmentationResult2(BaseModel):
+class InstanceSegmentationResult(BaseModel):
     task: Literal["instance-segmentation"] | None = None
     frames: list[InstanceSegmentationFrame] | None = None
-    tracks: list[InstanceSegmentationTrack]
-    mode: Literal["tracking"] | None = None
-
-
-class InstanceSegmentationResult(
-    RootModel[InstanceSegmentationResult1 | InstanceSegmentationResult2]
-):
-    root: InstanceSegmentationResult1 | InstanceSegmentationResult2
+    tracks: list[InstanceSegmentationTrack] | None = None
 
 
 class PoseInstance(BaseModel):
@@ -255,22 +229,10 @@ class PoseTrack(BaseModel):
     observations: list[PoseTrackObservation]
 
 
-class PoseResult1(BaseModel):
-    task: Literal["pose"] | None = None
-    frames: list[PoseFrame]
-    tracks: list[PoseTrack] | None = None
-    mode: Literal["per-frame"] | None = None
-
-
-class PoseResult2(BaseModel):
+class PoseResult(BaseModel):
     task: Literal["pose"] | None = None
     frames: list[PoseFrame] | None = None
-    tracks: list[PoseTrack]
-    mode: Literal["tracking"] | None = None
-
-
-class PoseResult(RootModel[PoseResult1 | PoseResult2]):
-    root: PoseResult1 | PoseResult2
+    tracks: list[PoseTrack] | None = None
 
 
 class ObbInstance(BaseModel):
@@ -313,22 +275,10 @@ class ObbTrack(BaseModel):
     observations: list[ObbTrackObservation]
 
 
-class ObbResult1(BaseModel):
-    task: Literal["obb"] | None = None
-    frames: list[ObbFrame]
-    tracks: list[ObbTrack] | None = None
-    mode: Literal["per-frame"] | None = None
-
-
-class ObbResult2(BaseModel):
+class ObbResult(BaseModel):
     task: Literal["obb"] | None = None
     frames: list[ObbFrame] | None = None
-    tracks: list[ObbTrack]
-    mode: Literal["tracking"] | None = None
-
-
-class ObbResult(RootModel[ObbResult1 | ObbResult2]):
-    root: ObbResult1 | ObbResult2
+    tracks: list[ObbTrack] | None = None
 
 
 class ClassificationFrame(BaseModel):
@@ -409,7 +359,7 @@ class DepthResult(BaseModel):
     artifact: DepthArtifact
 
 
-class SightForgeResultDocument1(BaseModel):
+class SightForgeResultDocument1(DetectionResult):
     schema_version: Annotated[SchemaVersion, Field(description="Contract schema version per R51")]
     job_id: Annotated[str, Field(description="Unique identifier for the job")]
     task: Annotated[Literal["detection"], Field(description="Computer vision task discriminator")]
@@ -425,7 +375,7 @@ class SightForgeResultDocument1(BaseModel):
     summary: ProcessingSummary
 
 
-class SightForgeResultDocument2(BaseModel):
+class SightForgeResultDocument2(InstanceSegmentationResult):
     schema_version: Annotated[SchemaVersion, Field(description="Contract schema version per R51")]
     job_id: Annotated[str, Field(description="Unique identifier for the job")]
     task: Annotated[
@@ -444,7 +394,7 @@ class SightForgeResultDocument2(BaseModel):
     summary: ProcessingSummary
 
 
-class SightForgeResultDocument3(BaseModel):
+class SightForgeResultDocument3(PoseResult):
     schema_version: Annotated[SchemaVersion, Field(description="Contract schema version per R51")]
     job_id: Annotated[str, Field(description="Unique identifier for the job")]
     task: Annotated[Literal["pose"], Field(description="Computer vision task discriminator")]
@@ -460,7 +410,7 @@ class SightForgeResultDocument3(BaseModel):
     summary: ProcessingSummary
 
 
-class SightForgeResultDocument4(BaseModel):
+class SightForgeResultDocument4(ObbResult):
     schema_version: Annotated[SchemaVersion, Field(description="Contract schema version per R51")]
     job_id: Annotated[str, Field(description="Unique identifier for the job")]
     task: Annotated[Literal["obb"], Field(description="Computer vision task discriminator")]
