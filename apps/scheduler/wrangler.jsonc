@@ -20,6 +20,15 @@
   "triggers": {
     "crons": ["*/15 * * * *", "0 0 * * *"]
   },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "JOB_ROOM",
+        "class_name": "JobRoom",
+        "script_name": "sightforge-api-jobs-prod"
+      }
+    ]
+  },
   "vars": {
     "ENVIRONMENT": "prod"
   }
