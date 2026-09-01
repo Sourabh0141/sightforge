@@ -1,5 +1,11 @@
 """SightForge Inference Service Package."""
 
+from .adapter import (
+    REVERSAL_SURFACE_REGISTRY,
+    InferenceConfig,
+    ModelAdapter,
+    ReversalSurface,
+)
 from .app import (
     app,
     cpu_image,
@@ -32,6 +38,10 @@ __all__ = [
     "weights_volume",
     "frames_volume",
     "inference_secrets",
+    "ModelAdapter",
+    "InferenceConfig",
+    "ReversalSurface",
+    "REVERSAL_SURFACE_REGISTRY",
     "WEIGHT_REGISTRY",
     "WEIGHTS_VOLUME_NAME",
     "FRAMES_VOLUME_NAME",
