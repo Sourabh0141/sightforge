@@ -23,6 +23,13 @@ from .config import (
     ModelVariant,
     VisionTask,
 )
+from .infer import (
+    GPU_ACCELERATOR,
+    TRACKING_ELIGIBLE_TASKS,
+    InferenceRunner,
+    build_tracker_config,
+    run_tracking_pipeline,
+)
 from .media import (
     FrameEntry,
     FrameManifest,
@@ -88,4 +95,9 @@ __all__ = [
     "probe_media",
     "extract_frames",
     "cleanup_job_frames",
+    "GPU_ACCELERATOR",
+    "TRACKING_ELIGIBLE_TASKS",
+    "InferenceRunner",
+    "build_tracker_config",
+    "run_tracking_pipeline",
 ]
