@@ -77,7 +77,7 @@ When a unit cites an R-ID you do not recognise, look it up in the requirements c
 ## P2 — Edge API
 
 - [x] 10 · **P2 U1** — Worker configs, bindings, secrets, asset Worker
-- [ ] 11 · **P2 U2** — shared middleware + Counter Durable Object ← **critical path, don't rush**
+- [x] 11 · **P2 U2** — shared middleware + Counter Durable Object ← **critical path, don't rush**
 - [ ] 12 · **P2 U3** — authentication Worker
 - [ ] 13 · **P2 U4** — job lifecycle Worker _(six subsystems; budget accordingly)_
 - [ ] 14 · **P2 U5** — JobRoom live status Durable Object
