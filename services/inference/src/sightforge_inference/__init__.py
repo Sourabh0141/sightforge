@@ -58,9 +58,11 @@ from .tasks import (
     DetectionAdapter,
     InstanceSegmentationAdapter,
     ObbAdapter,
+    PermissiveDepthAdapter,
     PoseAdapter,
     SemanticSegmentationAdapter,
     get_task_adapter,
+    normalize_relative_inverse_depth,
 )
 from .weights import (
     compute_file_sha256,
@@ -96,6 +98,8 @@ __all__ = [
     "ObbAdapter",
     "SemanticSegmentationAdapter",
     "DepthAdapter",
+    "PermissiveDepthAdapter",
+    "normalize_relative_inverse_depth",
     "get_task_adapter",
     "compute_file_sha256",
     "verify_weight_checksum",

@@ -5,6 +5,10 @@ from ..config import ModelVariant, VisionTask
 from .base import BaseYOLOAdapter
 from .classification import ClassificationAdapter
 from .depth import DepthAdapter
+from .depth_alternative import (
+    PermissiveDepthAdapter,
+    normalize_relative_inverse_depth,
+)
 from .detection import DetectionAdapter
 from .instance_segmentation import InstanceSegmentationAdapter
 from .obb import ObbAdapter
@@ -43,6 +47,8 @@ __all__ = [
     "ObbAdapter",
     "SemanticSegmentationAdapter",
     "DepthAdapter",
+    "PermissiveDepthAdapter",
+    "normalize_relative_inverse_depth",
     "get_task_adapter",
     "TASK_ADAPTER_MAP",
 ]

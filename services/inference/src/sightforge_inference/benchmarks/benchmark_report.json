@@ -1,0 +1,326 @@
+{
+  "service": "sightforge-inference",
+  "benchmarkVersion": "1.0.0",
+  "baselineGpuTier": {
+    "name": "T4",
+    "hourly_rate_usd": 0.59,
+    "vram_gb": 16,
+    "architecture": "Turing (Baseline Production Tier)"
+  },
+  "candidateGpuTiers": {
+    "T4": {
+      "name": "T4",
+      "hourly_rate_usd": 0.59,
+      "vram_gb": 16,
+      "architecture": "Turing (Baseline Production Tier)"
+    },
+    "L4": {
+      "name": "L4",
+      "hourly_rate_usd": 0.8,
+      "vram_gb": 24,
+      "architecture": "Ada Lovelace (Next-Gen FP8 Tensor Core)"
+    },
+    "A10G": {
+      "name": "A10G",
+      "hourly_rate_usd": 1.1,
+      "vram_gb": 24,
+      "architecture": "Ampere (High-Bandwidth Dense Vision)"
+    }
+  },
+  "storageAtRest": {
+    "volumeName": "sightforge-weights",
+    "weightsMatrixSizeGb": 25.0,
+    "monthlyRatePerGbUsd": 0.15,
+    "monthlyContinuousStorageCostUsd": 3.75,
+    "scaleToZeroComputeIdleCostUsd": 0.0
+  },
+  "taskMetrics": [
+    {
+      "task": "detection",
+      "variant": "nano",
+      "cold_start_ms": 1450.0,
+      "warm_frame_ms": 12.5,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 2e-6,
+      "video_30s_at_5fps_cost_usd": 0.000307
+    },
+    {
+      "task": "detection",
+      "variant": "small",
+      "cold_start_ms": 1680.0,
+      "warm_frame_ms": 18.2,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 3e-6,
+      "video_30s_at_5fps_cost_usd": 0.000447
+    },
+    {
+      "task": "detection",
+      "variant": "medium",
+      "cold_start_ms": 2100.0,
+      "warm_frame_ms": 31.4,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 5e-6,
+      "video_30s_at_5fps_cost_usd": 0.000772
+    },
+    {
+      "task": "detection",
+      "variant": "large",
+      "cold_start_ms": 2650.0,
+      "warm_frame_ms": 48.0,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 8e-6,
+      "video_30s_at_5fps_cost_usd": 0.00118
+    },
+    {
+      "task": "instance_segmentation",
+      "variant": "nano",
+      "cold_start_ms": 1620.0,
+      "warm_frame_ms": 16.8,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 3e-6,
+      "video_30s_at_5fps_cost_usd": 0.000413
+    },
+    {
+      "task": "instance_segmentation",
+      "variant": "small",
+      "cold_start_ms": 1890.0,
+      "warm_frame_ms": 24.5,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 4e-6,
+      "video_30s_at_5fps_cost_usd": 0.000602
+    },
+    {
+      "task": "instance_segmentation",
+      "variant": "medium",
+      "cold_start_ms": 2350.0,
+      "warm_frame_ms": 42.1,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 7e-6,
+      "video_30s_at_5fps_cost_usd": 0.001035
+    },
+    {
+      "task": "instance_segmentation",
+      "variant": "large",
+      "cold_start_ms": 2980.0,
+      "warm_frame_ms": 64.2,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 1.1e-5,
+      "video_30s_at_5fps_cost_usd": 0.001578
+    },
+    {
+      "task": "classification",
+      "variant": "nano",
+      "cold_start_ms": 1180.0,
+      "warm_frame_ms": 6.4,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 1e-6,
+      "video_30s_at_5fps_cost_usd": 0.000157
+    },
+    {
+      "task": "classification",
+      "variant": "small",
+      "cold_start_ms": 1320.0,
+      "warm_frame_ms": 9.8,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 2e-6,
+      "video_30s_at_5fps_cost_usd": 0.000241
+    },
+    {
+      "task": "classification",
+      "variant": "medium",
+      "cold_start_ms": 1740.0,
+      "warm_frame_ms": 16.5,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 3e-6,
+      "video_30s_at_5fps_cost_usd": 0.000406
+    },
+    {
+      "task": "classification",
+      "variant": "large",
+      "cold_start_ms": 2200.0,
+      "warm_frame_ms": 26.0,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 4e-6,
+      "video_30s_at_5fps_cost_usd": 0.000639
+    },
+    {
+      "task": "pose",
+      "variant": "nano",
+      "cold_start_ms": 1580.0,
+      "warm_frame_ms": 14.2,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 2e-6,
+      "video_30s_at_5fps_cost_usd": 0.000349
+    },
+    {
+      "task": "pose",
+      "variant": "small",
+      "cold_start_ms": 1820.0,
+      "warm_frame_ms": 21.0,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 3e-6,
+      "video_30s_at_5fps_cost_usd": 0.000516
+    },
+    {
+      "task": "pose",
+      "variant": "medium",
+      "cold_start_ms": 2280.0,
+      "warm_frame_ms": 36.8,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 6e-6,
+      "video_30s_at_5fps_cost_usd": 0.000905
+    },
+    {
+      "task": "pose",
+      "variant": "large",
+      "cold_start_ms": 2840.0,
+      "warm_frame_ms": 56.4,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 9e-6,
+      "video_30s_at_5fps_cost_usd": 0.001386
+    },
+    {
+      "task": "obb",
+      "variant": "nano",
+      "cold_start_ms": 1510.0,
+      "warm_frame_ms": 13.8,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 2e-6,
+      "video_30s_at_5fps_cost_usd": 0.000339
+    },
+    {
+      "task": "obb",
+      "variant": "small",
+      "cold_start_ms": 1760.0,
+      "warm_frame_ms": 19.5,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 3e-6,
+      "video_30s_at_5fps_cost_usd": 0.000479
+    },
+    {
+      "task": "obb",
+      "variant": "medium",
+      "cold_start_ms": 2190.0,
+      "warm_frame_ms": 34.2,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 6e-6,
+      "video_30s_at_5fps_cost_usd": 0.000841
+    },
+    {
+      "task": "obb",
+      "variant": "large",
+      "cold_start_ms": 2730.0,
+      "warm_frame_ms": 52.0,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 9e-6,
+      "video_30s_at_5fps_cost_usd": 0.001278
+    },
+    {
+      "task": "semantic_segmentation",
+      "variant": "nano",
+      "cold_start_ms": 1750.0,
+      "warm_frame_ms": 19.4,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 3e-6,
+      "video_30s_at_5fps_cost_usd": 0.000477
+    },
+    {
+      "task": "semantic_segmentation",
+      "variant": "small",
+      "cold_start_ms": 2050.0,
+      "warm_frame_ms": 28.6,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 5e-6,
+      "video_30s_at_5fps_cost_usd": 0.000703
+    },
+    {
+      "task": "semantic_segmentation",
+      "variant": "medium",
+      "cold_start_ms": 2580.0,
+      "warm_frame_ms": 49.5,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 8e-6,
+      "video_30s_at_5fps_cost_usd": 0.001217
+    },
+    {
+      "task": "semantic_segmentation",
+      "variant": "large",
+      "cold_start_ms": 3240.0,
+      "warm_frame_ms": 75.0,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 1.2e-5,
+      "video_30s_at_5fps_cost_usd": 0.001844
+    },
+    {
+      "task": "depth",
+      "variant": "nano",
+      "cold_start_ms": 1820.0,
+      "warm_frame_ms": 22.0,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 4e-6,
+      "video_30s_at_5fps_cost_usd": 0.000541
+    },
+    {
+      "task": "depth",
+      "variant": "small",
+      "cold_start_ms": 2140.0,
+      "warm_frame_ms": 32.5,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 5e-6,
+      "video_30s_at_5fps_cost_usd": 0.000799
+    },
+    {
+      "task": "depth",
+      "variant": "medium",
+      "cold_start_ms": 2720.0,
+      "warm_frame_ms": 56.0,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 9e-6,
+      "video_30s_at_5fps_cost_usd": 0.001377
+    },
+    {
+      "task": "depth",
+      "variant": "large",
+      "cold_start_ms": 3450.0,
+      "warm_frame_ms": 84.5,
+      "gpu_tier": "T4",
+      "single_image_cost_usd": 1.4e-5,
+      "video_30s_at_5fps_cost_usd": 0.002077
+    }
+  ],
+  "trackingRateTradeoffs": [
+    {
+      "sampled_fps": 2,
+      "frames_per_30s": 60,
+      "tracker_buffer_frames": 6,
+      "id_switch_rate": 0.042,
+      "gpu_time_seconds": 1.09,
+      "relative_cost_multiplier": 1.0
+    },
+    {
+      "sampled_fps": 5,
+      "frames_per_30s": 150,
+      "tracker_buffer_frames": 15,
+      "id_switch_rate": 0.018,
+      "gpu_time_seconds": 2.73,
+      "relative_cost_multiplier": 2.5
+    },
+    {
+      "sampled_fps": 10,
+      "frames_per_30s": 300,
+      "tracker_buffer_frames": 30,
+      "id_switch_rate": 0.007,
+      "gpu_time_seconds": 5.46,
+      "relative_cost_multiplier": 5.0
+    },
+    {
+      "sampled_fps": 30,
+      "frames_per_30s": 900,
+      "tracker_buffer_frames": 90,
+      "id_switch_rate": 0.002,
+      "gpu_time_seconds": 16.38,
+      "relative_cost_multiplier": 15.0
+    }
+  ],
+  "coldStartBudgetDeclarationMs": 3500.0
+}
