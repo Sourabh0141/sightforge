@@ -97,7 +97,7 @@ When a unit cites an R-ID you do not recognise, look it up in the requirements c
 - [x] 19 · **P3 U3** — the seven task implementations ← **first real model output**
 - [x] 20 · **P3 U4** — CPU function: probe, decode, frame extraction
 - [x] 21 · **P3 U5** — GPU class and the two video pipelines
-- [ ] 22 · **P3 U6** — contract wiring: trigger, progress, completion
+- [x] 22 · **P3 U6** — contract wiring: trigger, progress, completion
 - [ ] 23 · **P3 U7** — permissive second adapter, cost benchmark
 
 **Gate:** a real job runs end to end through the real trigger. Cost per job is measured, not estimated. You are holding real result fixtures for all seven tasks.
