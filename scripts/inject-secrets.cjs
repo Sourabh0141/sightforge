@@ -104,24 +104,41 @@ function putModalSecrets(secretEntries, isDryRun = false) {
   // Format key=value pairs
   const secretArgs = secretEntries.map(({ name, value }) => `${name}=${value}`);
 
-  // Try creating or updating the Modal secret group
-  const result = spawnSync('modal', ['secret', 'set', secretGroupName, ...secretArgs], {
+  // Try creating or updating the Modal secret group via uv run modal or modal
+  let result = spawnSync('uv', ['run', 'modal', 'secret', 'set', secretGroupName, ...secretArgs], {
     cwd: ROOT_DIR,
     encoding: 'utf-8',
     env: process.env,
   });
 
   if (result.status !== 0) {
-    // Attempt create if set is unsupported or group does not exist yet
-    const createResult = spawnSync('modal', ['secret', 'create', secretGroupName, ...secretArgs, '--force'], {
+    // Attempt create via uv run modal if set is unsupported or group does not exist yet
+    result = spawnSync('uv', ['run', 'modal', 'secret', 'create', secretGroupName, ...secretArgs, '--force'], {
       cwd: ROOT_DIR,
       encoding: 'utf-8',
       env: process.env,
     });
 
-    if (createResult.status !== 0) {
-      console.warn(`  ⚠️ Modal secret group update failed: ${createResult.stderr || createResult.error?.message}`);
-      return false;
+    if (result.status !== 0) {
+      // Fallback to direct modal command in system path
+      const fallbackResult = spawnSync('modal', ['secret', 'set', secretGroupName, ...secretArgs], {
+        cwd: ROOT_DIR,
+        encoding: 'utf-8',
+        env: process.env,
+      });
+
+      if (fallbackResult.status !== 0) {
+        const createFallback = spawnSync('modal', ['secret', 'create', secretGroupName, ...secretArgs, '--force'], {
+          cwd: ROOT_DIR,
+          encoding: 'utf-8',
+          env: process.env,
+        });
+
+        if (createFallback.status !== 0) {
+          console.warn(`  ⚠️ Modal secret group update failed: ${result.stderr || result.error?.message || createFallback.stderr || createFallback.error?.message}`);
+          return false;
+        }
+      }
     }
   }
 

@@ -101,7 +101,7 @@ jobs:
 
       # ─── STEP 5: REMOTE D1 DATABASE MIGRATIONS (R26) ───────────────────────
       - name: Step 5 - Apply Remote D1 Database Migrations
-        run: pnpm --filter @sightforge/db wrangler d1 migrations apply sightforge-d1-prod --remote
+        run: pnpm --filter @sightforge/db exec wrangler d1 migrations apply sightforge-d1-prod --remote
 
       # ─── STEP 6: DEPLOY WORKERS & MODAL APP (KTD5, R83) ───────────────────
       - name: "Step 6 - Deploy Cloudflare Workers & Modal App (Tagged: ${{ github.sha }})"
