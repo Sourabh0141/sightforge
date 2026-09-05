@@ -60,7 +60,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <a
               key={tab.id}
               href={tab.href}
-              className="flex flex-col items-center -mt-5 group"
+              aria-current={isActive ? "page" : undefined}
+              className="flex flex-col items-center -mt-5 group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#22D3EE] rounded-full"
             >
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#22D3EE] text-[#0A0C10] shadow-lg shadow-[#22D3EE]/20 group-active:scale-95 transition-transform">
                 {tab.icon}
@@ -76,8 +77,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <a
             key={tab.id}
             href={tab.href}
+            aria-current={isActive ? "page" : undefined}
             className={clsx(
-              "flex flex-col items-center gap-1 py-1 px-3 rounded-md transition-colors",
+              "flex flex-col items-center gap-1 py-1 px-3 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#22D3EE]",
               isActive
                 ? "text-[#22D3EE]"
                 : "text-[#9AA3B2] hover:text-[#E8EAED]",
