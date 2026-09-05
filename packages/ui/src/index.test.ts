@@ -23,5 +23,10 @@ describe("@sightforge/ui Component Exports (P4 U1)", () => {
     expect(UI.ClassificationViewer).toBeDefined();
     expect(UI.ResultDataTable).toBeDefined();
     expect(UI.VideoScrubber).toBeDefined();
+    expect(UI.RawJsonInspector).toBeDefined();
+    expect(UI.computeSemanticSummary).toBeDefined();
+    expect(UI.computeDepthSummary).toBeDefined();
+    expect(UI.drawSemanticSegmentationOverlay).toBeDefined();
+    expect(UI.drawDepthOverlay).toBeDefined();
   });
 });

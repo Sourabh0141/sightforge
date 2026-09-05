@@ -1,11 +1,8 @@
 import React from "react";
-import {
-  Button,
-  ArrowLeftIcon,
-  SparklesIcon,
-  ViewerShell,
-} from "@sightforge/ui";
+import { Button, ArrowLeftIcon, SparklesIcon } from "@sightforge/ui";
 import { GALLERY_TASK_MAP } from "@/lib/gallery-fixtures";
+
+import { GalleryTaskClient } from "./GalleryTaskClient";
 
 export async function generateStaticParams() {
   return [
@@ -71,11 +68,7 @@ export default async function GalleryTaskPage({ params }: GalleryTaskProps) {
         </div>
 
         {taskMeta ? (
-          <ViewerShell
-            document={taskMeta.document}
-            mediaUrl={taskMeta.mediaUrl}
-            readOnly
-          />
+          <GalleryTaskClient taskMeta={taskMeta} />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-8 bg-[#12151C] border border-[#252B37] rounded-[8px] p-4 flex items-center justify-center min-h-[460px]">
