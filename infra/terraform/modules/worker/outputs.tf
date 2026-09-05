@@ -5,5 +5,5 @@ output "id" {
 
 output "name" {
   description = "The name of the Worker script"
-  value       = cloudflare_workers_script.this.name
+  value       = cloudflare_workers_script.this.script_name
 }

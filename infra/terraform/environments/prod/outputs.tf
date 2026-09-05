@@ -20,7 +20,7 @@ output "jobs_queue_id" {
 
 output "jobs_queue_name" {
   description = "The name of the provisioned Cloudflare Queue"
-  value       = cloudflare_queue.jobs_queue.name
+  value       = cloudflare_queue.jobs_queue.queue_name
 }
 
 output "worker_names" {

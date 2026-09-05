@@ -14,16 +14,16 @@ SightForge uses a polyglot monorepo (TypeScript and Python) with disjoint subtre
                             ▼
                   ┌────────────────────┐
                   │   detect-changes   │ (dorny/paths-filter)
-                  └─┬───────┬────────┬─┘
-                    │       │        │
-          ┌─────────┘       │        └──────────┐
-          ▼                 ▼                   ▼
-  ┌───────────────┐ ┌───────────────┐   ┌───────────────┐
-  │  typescript   │ │    python     │   │ security-scan │ (Gitleaks, audit-secrets,
-  │ (lint/type/t) │ │ (ruff/mypy/t) │   │ (pnpm / pip)  │  pnpm/pip audit)
-  └───────┬───────┘ └───────┬───────┘   └───────┬───────┘
-          │                 │                   │
-          └────────────┬────┴───────────────────┘
+                  └─┬───────┬────┬───┬─┘
+                    │       │    │   │
+          ┌─────────┘       │    │   └──────────────┬──────────────────┐
+          ▼                 ▼    ▼                  ▼                  ▼
+  ┌───────────────┐ ┌───────────────┐ ┌───────────────────┐ ┌───────────────────┐ ┌───────────────┐
+  │  typescript   │ │    python     │ │ terraform-checks  │ │   security-scan   │ │   (docs: no   │
+  │ (lint/type/t) │ │ (ruff/mypy/t) │ │ (fmt/val/tfl/sec) │ │ (Gitleaks/audits) │ │  jobs needed) │
+  └───────┬───────┘ └───────┬───────┘ └─────────┬─────────┘ └─────────┬─────────┘ └───────────────┘
+          │                 │                   │                     │
+          └────────────┬────┴───────────────────┴─────────────────────┘
                        ▼
             ┌─────────────────────┐
             │    ci-aggregator    │  <── ONLY REQUIRED CHECK
@@ -38,7 +38,7 @@ SightForge uses a polyglot monorepo (TypeScript and Python) with disjoint subtre
 ### Why it is used
 
 - **The "Pending Check" Problem:** Setting path filters at the workflow level (`on: pull_request: paths: [...]`) causes GitHub Actions to skip the workflow entirely for PRs touching unrelated files (e.g. Markdown documentation). In that case, GitHub Branch Protection waits indefinitely for the status check to report, blocking the PR from merging.
-- **The "Skipped Check as Success" Problem:** If individual jobs (e.g. `python-checks`) are set as required status checks in Branch Protection, GitHub considers a skipped job as "successful", which can accidentally allow broken code to merge if dependencies fail.
+- **The "Skipped Check as Success" Problem:** If individual jobs (e.g. `python-checks`, `terraform-checks`) are set as required status checks in Branch Protection, GitHub considers a skipped job as "successful", which can accidentally allow broken code to merge if dependencies fail.
 - **The Solution:**
   1. The workflow triggers on all pull requests against `main`.
   2. `detect-changes` evaluates changed files and sets boolean outputs (`typescript`, `python`, `terraform`, etc.).
@@ -59,7 +59,7 @@ Changes under `packages/contracts/**` or `config/defaults.json` generate types c
 | `contracts`  | `packages/contracts/**`, `config/defaults.json`                                                | Runs `typescript-checks` and `python-checks`           |
 | `typescript` | `apps/**`, `packages/**`, `package.json`, `pnpm-lock.yaml`, `tsconfig.base.json`, `turbo.json` | Runs `typescript-checks`                               |
 | `python`     | `services/**`, `pyproject.toml`, `uv.lock`                                                     | Runs `python-checks`                                   |
-| `terraform`  | `infra/terraform/**`                                                                           | Runs Terraform validation (P5 U4)                      |
+| `terraform`  | `infra/**`, `.tflint.hcl`, `scripts/audit-infra-policy.cjs`                                    | Runs `terraform-checks` (fmt, validate, tflint, plan)  |
 | `docs`       | `docs/**`, `README.md`, `LICENSE`                                                              | Triggers no test jobs; aggregator succeeds immediately |
 
 ---
@@ -74,7 +74,24 @@ SightForge maintains an uncompromised security perimeter:
 
 ---
 
-## 5. GitHub Branch Protection Setup
+## 5. Terraform Infrastructure Pipeline & Policy Scanning (R88, KTD3)
+
+Infrastructure modifications (`infra/**`, `.tflint.hcl`, `scripts/audit-infra-policy.cjs`) trigger the `terraform-checks` job:
+
+1. **Formatting & Syntax:** Runs `terraform fmt -check -recursive infra/terraform` and `terraform validate` across `infra/terraform/environments/prod`.
+2. **Linting (TFLint):** Uses root `.tflint.hcl` with recommended rules to verify syntax and provider usage.
+3. **Configuration & Security Scan:** Runs Trivy IaC scanner (`aquasecurity/trivy-action`) and the deterministic custom policy auditor (`scripts/audit-infra-policy.cjs`) asserting:
+   - No wildcard CORS origins (`"*"`) in R2 bucket policies.
+   - No hardcoded sensitive variable defaults in `variables.tf`.
+   - Mandatory R2 multipart upload abort and retention lifecycle rules.
+4. **Speculative Planning & Artifact Archiving:**
+   - Produces speculative plan output and publishes summary to `$GITHUB_STEP_SUMMARY`.
+   - Archives `tfplan.binary` using `actions/upload-artifact@v4` with a 7-day retention period. The production deployment workflow (**P5 U5**) downloads and applies this reviewed artifact directly.
+5. **Fork Safety (`KTD3`):** Forked pull requests run all format, lint, validate, and policy checks without credentials; credentialed speculative planning is safely deferred to repository maintainers.
+
+---
+
+## 6. GitHub Branch Protection Setup
 
 To configure branch protection on GitHub for the repository:
 
@@ -86,21 +103,27 @@ To configure branch protection on GitHub for the repository:
    ```text
    CI Aggregator (Required Check)
    ```
-6. **Do NOT** select individual jobs (`typescript-checks`, `python-checks`, `security-scan`) as required checks, as conditional checks are managed by the aggregator.
+6. **Do NOT** select individual jobs (`typescript-checks`, `python-checks`, `terraform-checks`, `security-scan`) as required checks, as conditional checks are managed by the aggregator.
 7. Save the rule.
 
 ---
 
-## 6. Troubleshooting CI Failures
+## 7. Troubleshooting CI Failures
 
 ### Case A: Aggregator Failed (`❌ CI AGGREGATOR RESULT: FAILED`)
 
 1. Open the GitHub Actions run.
-2. Look for the red job (e.g. `security-scan`, `typescript-checks`, or `python-checks`).
+2. Look for the red job (e.g. `security-scan`, `typescript-checks`, `python-checks`, or `terraform-checks`).
 3. Inspect the failed step logs.
 4. Fix the issue locally and push a new commit to the branch.
 
-### Case B: Secret Scanner Alert
+### Case B: Terraform Policy Check Failed
+
+1. Run `node scripts/audit-infra-policy.cjs` locally to inspect the policy violation.
+2. Ensure no wildcard CORS origins or default secret values exist in `.tf` files.
+3. Run `terraform fmt -recursive infra/terraform` to resolve formatting discrepancies.
+
+### Case C: Secret Scanner Alert
 
 1. If Gitleaks fails in CI, inspect the detected pattern or file in the job log.
 2. If it is a legitimate credential, immediately rotate it out-of-band and rewrite the branch history before merging to public trunk.

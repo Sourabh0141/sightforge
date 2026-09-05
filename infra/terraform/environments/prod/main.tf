@@ -25,7 +25,7 @@ resource "cloudflare_d1_database" "database" {
 resource "cloudflare_r2_bucket" "media" {
   account_id = var.cloudflare_account_id
   name       = local.media_name
-  location   = "APAC"
+  location   = "apac"
 }
 
 # R2 CORS Policy: Allows frontend PUT uploads and GET/HEAD reads with exposed ETag (R79)
@@ -35,9 +35,12 @@ resource "cloudflare_r2_bucket_cors" "media_cors" {
 
   rules = [
     {
-      allowed_origins = var.cors_allowed_origins
-      allowed_methods = ["GET", "HEAD", "PUT"]
-      allowed_headers = ["*"]
+      id = "sightforge-media-cors"
+      allowed = {
+        origins = var.cors_allowed_origins
+        methods = ["GET", "HEAD", "PUT"]
+        headers = ["*"]
+      }
       expose_headers  = ["ETag", "Content-Length", "Content-Type"]
       max_age_seconds = 86400
     }
@@ -51,14 +54,30 @@ resource "cloudflare_r2_bucket_lifecycle" "media_lifecycle" {
 
   rules = [
     {
-      id                                     = "abort-incomplete-multipart-uploads"
-      enabled                                = true
-      abort_incomplete_multipart_upload_days = var.media_lifecycle_multipart_abort_days
+      id      = "abort-incomplete-multipart-uploads"
+      enabled = true
+      conditions = {
+        prefix = ""
+      }
+      abort_multipart_uploads_transition = {
+        condition = {
+          max_age = var.media_lifecycle_multipart_abort_days * 86400
+          type    = "Age"
+        }
+      }
     },
     {
-      id          = "expire-stale-media-backstop"
-      enabled     = true
-      expire_days = var.media_lifecycle_stale_expiry_days
+      id      = "expire-stale-media-backstop"
+      enabled = true
+      conditions = {
+        prefix = ""
+      }
+      delete_objects_transition = {
+        condition = {
+          max_age = var.media_lifecycle_stale_expiry_days * 86400
+          type    = "Age"
+        }
+      }
     }
   ]
 }
@@ -66,7 +85,7 @@ resource "cloudflare_r2_bucket_lifecycle" "media_lifecycle" {
 # 3. Cloudflare Queue for asynchronous CV job execution (R3, R79)
 resource "cloudflare_queue" "jobs_queue" {
   account_id = var.cloudflare_account_id
-  name       = local.queue_name
+  queue_name = local.queue_name
 }
 
 # 4. Five Worker Shells (web, api-auth, api-jobs, events, scheduler) (R3, KTD7, R79)
@@ -74,35 +93,30 @@ module "worker_web" {
   source     = "../../modules/worker"
   account_id = var.cloudflare_account_id
   name       = local.workers.web
-  tags       = ["sightforge", "frontend", local.env_suffix]
 }
 
 module "worker_api_auth" {
   source     = "../../modules/worker"
   account_id = var.cloudflare_account_id
   name       = local.workers.api_auth
-  tags       = ["sightforge", "api", "auth", local.env_suffix]
 }
 
 module "worker_api_jobs" {
   source     = "../../modules/worker"
   account_id = var.cloudflare_account_id
   name       = local.workers.api_jobs
-  tags       = ["sightforge", "api", "jobs", local.env_suffix]
 }
 
 module "worker_events" {
   source     = "../../modules/worker"
   account_id = var.cloudflare_account_id
   name       = local.workers.events
-  tags       = ["sightforge", "events", "queue-consumer", local.env_suffix]
 }
 
 module "worker_scheduler" {
   source     = "../../modules/worker"
   account_id = var.cloudflare_account_id
   name       = local.workers.scheduler
-  tags       = ["sightforge", "scheduler", "cron", local.env_suffix]
 }
 
 # 5. Scheduled Cron Triggers for Scheduler Worker (R79)
@@ -110,7 +124,7 @@ resource "cloudflare_workers_cron_trigger" "scheduler_cron" {
   account_id  = var.cloudflare_account_id
   script_name = module.worker_scheduler.name
   schedules = [
-    "*/15 * * * *", # Telemetry & quota monitor
-    "0 0 * * *"     # Daily retention & idempotency key cleanup
+    { cron = "*/15 * * * *" }, # Telemetry & quota monitor
+    { cron = "0 0 * * *" }     # Daily retention & idempotency key cleanup
   ]
 }

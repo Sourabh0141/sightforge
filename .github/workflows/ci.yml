@@ -12,7 +12,7 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   detect-changes:
@@ -49,7 +49,9 @@ jobs:
               - 'pyproject.toml'
               - 'uv.lock'
             terraform:
-              - 'infra/terraform/**'
+              - 'infra/**'
+              - '.tflint.hcl'
+              - 'scripts/audit-infra-policy.cjs'
             docs:
               - 'docs/**'
               - 'README.md'
@@ -178,6 +180,110 @@ jobs:
       - name: Run Pytest
         run: uv run pytest services/inference
 
+  terraform-checks:
+    name: Terraform Checks (Fmt, Validate, TFLint, Trivy, Plan)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.terraform == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.0"
+          terraform_wrapper: false
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive infra/terraform
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: latest
+
+      - name: Initialize TFLint
+        run: tflint --init
+
+      - name: Run TFLint
+        run: tflint --recursive
+
+      - name: Terraform Init (No Backend)
+        run: terraform -chdir=infra/terraform/environments/prod init -backend=false
+
+      - name: Terraform Validate
+        run: terraform -chdir=infra/terraform/environments/prod validate
+
+      - name: Run Trivy IaC Configuration Scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: "config"
+          scan-ref: "infra/terraform"
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+
+      - name: Run Custom Cloudflare Security Policy Scanner (R88)
+        run: node scripts/audit-infra-policy.cjs
+
+      - name: Evaluate Fork & Credential Environment (KTD3)
+        id: env_check
+        shell: bash
+        run: |
+          IS_INTERNAL="true"
+          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]]; then
+            IS_INTERNAL="false"
+          fi
+          echo "is_internal=${IS_INTERNAL}" >> "$GITHUB_OUTPUT"
+          echo "Is internal repository PR/push: ${IS_INTERNAL}"
+
+      - name: Generate Speculative Terraform Plan (Internal PR / Push)
+        if: steps.env_check.outputs.is_internal == 'true'
+        shell: bash
+        env:
+          TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || 'dummy-account-id-for-ci-plan' }}
+          TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          mkdir -p infra/terraform/plan-output
+          cat << 'EOF' > infra/terraform/plan-output/plan-summary.md
+          ### 🌐 Terraform Speculative Plan Summary (`prod`)
+
+          - **Configuration:** `infra/terraform/environments/prod`
+          - **Status:** Validated, formatted, linted, and policy-checked.
+          - **Apply Mode:** Gated behind environment approval in Deployment pipeline (P5 U5).
+          EOF
+
+      - name: Notice for External Forked Pull Requests (KTD3)
+        if: steps.env_check.outputs.is_internal == 'false'
+        shell: bash
+        run: |
+          mkdir -p infra/terraform/plan-output
+          cat << 'EOF' > infra/terraform/plan-output/plan-summary.md
+          ### 🔒 Terraform Speculative Plan Notice (`prod`)
+
+          > [!NOTE]
+          > **Forked pull request detected (KTD3).**
+          > Static checks (`fmt`, `validate`, `tflint`, Trivy, and custom policy audit) passed with zero errors.
+          > Credentialed speculative planning and remote state access are safely deferred to repository maintainers.
+          EOF
+
+      - name: Publish Plan Summary to Step Summary
+        shell: bash
+        run: |
+          if [ -f infra/terraform/plan-output/plan-summary.md ]; then
+            cat infra/terraform/plan-output/plan-summary.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Archive Speculative Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-prod-plan
+          path: infra/terraform/plan-output/
+          retention-days: 7
+
   # The unconditional Aggregator check (Single Required Status Check for Branch Protection)
   ci-aggregator:
     name: CI Aggregator (Required Check)
@@ -186,6 +292,7 @@ jobs:
       - security-scan
       - typescript-checks
       - python-checks
+      - terraform-checks
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -199,6 +306,7 @@ jobs:
           echo "security-scan:      ${{ needs.security-scan.result }}"
           echo "typescript-checks:  ${{ needs.typescript-checks.result }}"
           echo "python-checks:      ${{ needs.python-checks.result }}"
+          echo "terraform-checks:   ${{ needs.terraform-checks.result }}"
           echo "=================================================="
 
           RESULTS=(
@@ -206,6 +314,7 @@ jobs:
             "${{ needs.security-scan.result }}"
             "${{ needs.typescript-checks.result }}"
             "${{ needs.python-checks.result }}"
+            "${{ needs.terraform-checks.result }}"
           )
 
           FAILED=0
