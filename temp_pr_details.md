@@ -1,4 +1,4 @@
-﻿# PR Title
+# PR Title
 
 fix(web): configure cloudflare service bindings and CSP inline scripts for hydration and auth
 
@@ -15,7 +15,8 @@ Resolves the client-side blank screen on initial page load, fixes user registrat
 5. **Removed Obsolete `public/index.html`**: Deleted leftover static `public/index.html` which could conflict with Next.js App Router prerendered export.
 6. **Smoke Test Stage 7 Contract Alignment (`scripts/smoke-test.cjs`)**: In `apps/api-jobs`, `handleGetJobResults` requires completed jobs and returns `HTTP 400` with `"Results are only available for completed jobs."` for newly created or in-progress jobs. Updated `scripts/smoke-test.cjs` to recognize `HTTP 400` alongside `200`, `202`, and `404` as a valid contract response for in-progress jobs.
 7. **R2 Presigned URL Account Binding**: Passed `accountId` (`CLOUDFLARE_ACCOUNT_ID` / `R2_ACCOUNT_ID`) to S3 SigV4 presigned URL generation in `apps/api-jobs`, and added `CLOUDFLARE_ACCOUNT_ID` to worker secret injection, resolving `fetch failed (ENOTFOUND)` when uploading media binaries to Cloudflare R2 storage in Stage 5.
-8. **Valid Semantic HTML & Hydration Stability**: Updated `Button` in `@sightforge/ui` to support `href`, rendering valid semantic `<a>` tags and eliminating invalid `<button>` in `<a>` nesting across landing, gallery, and dashboard pages to prevent React hydration unmounting.
+8. **R2 Media Bucket CORS Policy Update (`infra/terraform/environments/prod/variables.tf`)**: Permitted `https://*.workers.dev` in R2 storage bucket CORS rules alongside `https://sightforge.app`, enabling direct browser binary PUT uploads from preview and staging deployments without CORS preflight failures.
+9. **Valid Semantic HTML & Hydration Stability**: Updated `Button` in `@sightforge/ui` to support `href`, rendering valid semantic `<a>` tags and eliminating invalid `<button>` in `<a>` nesting across landing, gallery, and dashboard pages to prevent React hydration unmounting.
 
 ---
 
