@@ -9,24 +9,12 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { jobs, JobStatus } from "@sightforge/db";
+import { generatePresignedUrl, EventsWorkerEnv } from "@sightforge/worker-kit";
 import { validateMediaUpload } from "./validation.js";
 import { verifyModalCallbackSignature } from "./auth.js";
 import { dispatchInference } from "./dispatch.js";
 
-export interface EventsWorkerEnv {
-  ENVIRONMENT: string;
-  DB: D1Database;
-  MEDIA_BUCKET: R2Bucket;
-  JOBS_QUEUE: Queue;
-  JOB_ROOM?: DurableObjectNamespace;
-  COUNTER?: DurableObjectNamespace;
-  MODAL_CALLBACK_SECRET?: string;
-  MODAL_CALLBACK_PREVIOUS_SECRET?: string;
-  MODAL_TRIGGER_URL?: string;
-  MODAL_KEY?: string;
-  MODAL_SECRET?: string;
-  FRONTEND_ORIGIN?: string;
-}
+export type { EventsWorkerEnv };
 
 export interface ProgressCallbackPayload {
   jobId: string;
@@ -124,7 +112,7 @@ export default {
           .where(eq(jobs.id, jobId))
           .get();
 
-        if (!job || job.status !== "created") {
+        if (!job || (job.status !== "created" && job.status !== "uploading")) {
           msg.ack();
           continue;
         }
@@ -145,7 +133,12 @@ export default {
               errorMessage: "Uploaded media object was not found in storage.",
               updatedAt: new Date(now),
             })
-            .where(and(eq(jobs.id, jobId), eq(jobs.status, "created")));
+            .where(
+              and(
+                eq(jobs.id, jobId),
+                inArray(jobs.status, ["created", "uploading"]),
+              ),
+            );
 
           if (env.JOB_ROOM) {
             const roomStub = env.JOB_ROOM.get(env.JOB_ROOM.idFromName(jobId));
@@ -192,7 +185,12 @@ export default {
                 validation.errorMessage || "Media failed validation.",
               updatedAt: new Date(now),
             })
-            .where(and(eq(jobs.id, jobId), eq(jobs.status, "created")));
+            .where(
+              and(
+                eq(jobs.id, jobId),
+                inArray(jobs.status, ["created", "uploading"]),
+              ),
+            );
 
           if (env.JOB_ROOM) {
             const roomStub = env.JOB_ROOM.get(env.JOB_ROOM.idFromName(jobId));
@@ -226,7 +224,12 @@ export default {
             mediaEtag,
             updatedAt: new Date(now),
           })
-          .where(and(eq(jobs.id, jobId), eq(jobs.status, "created")));
+          .where(
+            and(
+              eq(jobs.id, jobId),
+              inArray(jobs.status, ["created", "uploading"]),
+            ),
+          );
 
         if (env.JOB_ROOM) {
           const roomStub = env.JOB_ROOM.get(env.JOB_ROOM.idFromName(jobId));
@@ -242,12 +245,76 @@ export default {
             .catch(() => {});
         }
 
+        // Generate presigned storage URLs for inference worker if credentials available
+        let mediaGetUrl: string | undefined;
+        let resultPutUrl: string | undefined;
+        let denseArtifactPutUrl: string | undefined;
+
+        if (env.R2_MEDIA_ACCESS_KEY_ID && env.R2_MEDIA_SECRET_ACCESS_KEY) {
+          try {
+            mediaGetUrl = await generatePresignedUrl({
+              method: "GET",
+              bucketName: "sightforge-media-prod",
+              objectKey: job.mediaKey || objectKey,
+              accessKeyId: env.R2_MEDIA_ACCESS_KEY_ID,
+              secretAccessKey: env.R2_MEDIA_SECRET_ACCESS_KEY,
+              accountId:
+                env.CLOUDFLARE_ACCOUNT_ID ||
+                env.R2_ACCOUNT_ID ||
+                "dummy_account_id",
+              expiresInSeconds: 3600,
+            });
+
+            if (job.resultKey) {
+              resultPutUrl = await generatePresignedUrl({
+                method: "PUT",
+                bucketName: "sightforge-media-prod",
+                objectKey: job.resultKey,
+                accessKeyId: env.R2_MEDIA_ACCESS_KEY_ID,
+                secretAccessKey: env.R2_MEDIA_SECRET_ACCESS_KEY,
+                accountId:
+                  env.CLOUDFLARE_ACCOUNT_ID ||
+                  env.R2_ACCOUNT_ID ||
+                  "dummy_account_id",
+                contentType: "application/json",
+                expiresInSeconds: 3600,
+              });
+            }
+
+            if (job.denseArtifactKey) {
+              denseArtifactPutUrl = await generatePresignedUrl({
+                method: "PUT",
+                bucketName: "sightforge-media-prod",
+                objectKey: job.denseArtifactKey,
+                accessKeyId: env.R2_MEDIA_ACCESS_KEY_ID,
+                secretAccessKey: env.R2_MEDIA_SECRET_ACCESS_KEY,
+                accountId:
+                  env.CLOUDFLARE_ACCOUNT_ID ||
+                  env.R2_ACCOUNT_ID ||
+                  "dummy_account_id",
+                contentType: "image/png",
+                expiresInSeconds: 3600,
+              });
+            }
+          } catch {
+            // Non-fatal if presigning encounters transient issues
+          }
+        }
+
+        const callbackBaseUrl =
+          env.EVENTS_SERVICE_URL ||
+          "https://sightforge-events-prod.sourabh-sharma0141.workers.dev";
+
         // Trigger outbound inference dispatch (KTD11)
         await dispatchInference({
           job: { ...job, mediaEtag, status: "queued" },
           triggerUrl: env.MODAL_TRIGGER_URL,
           modalKey: env.MODAL_KEY,
           modalSecret: env.MODAL_SECRET,
+          mediaGetUrl,
+          resultPutUrl,
+          denseArtifactPutUrl,
+          callbackBaseUrl,
         });
 
         msg.ack();

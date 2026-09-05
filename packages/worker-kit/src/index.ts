@@ -16,6 +16,7 @@ export * from "./counter.js";
 export * from "./rate-limit.js";
 export * from "./ownership.js";
 export * from "./middleware.js";
+export * from "./storage.js";
 
 // JobRoom Durable Object class stub (full implementation in P2 U5)
 export class JobRoom {
