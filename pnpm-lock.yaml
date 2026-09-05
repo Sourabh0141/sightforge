@@ -147,15 +147,15 @@ importers:
 
   apps/web:
     dependencies:
-      '@sightforge/worker-kit':
+      '@sightforge/contracts':
         specifier: workspace:*
-        version: link:../../packages/worker-kit
+        version: link:../../packages/contracts
+      '@sightforge/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
-      lucide-react:
-        specifier: ^1.41.0
-        version: 1.41.0(react@19.0.0)
       next:
         specifier: 15.1.7
         version: 15.1.7(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
