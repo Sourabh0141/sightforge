@@ -1,142 +1,136 @@
-﻿# Production Deployment Runbook
+# Production Deployment Runbook
 
-> **Scope:** Plan 1, Unit 6 (P1 U6)  
-> **Requirements:** R81, R84, R76, R79, R80, R119, R120, KTD7  
+> **Scope:** Plan 5, Unit 5 (P5 U5)  
+> **Requirements:** R89, R90, R91, R93, R83, R76, R79, R81, KTD3, KTD4, KTD5  
 > **Classification:** Operational Runbook
 
 ---
 
-## 1. Overview & Architectural Ordering (KTD7, R81)
+## 1. Overview & Architectural Ordering (KTD4, R89)
 
-The SightForge deployment pipeline orchestrates the transition from unbuilt source code to a live, empty, correctly bound Cloudflare production deployment.
+The SightForge deployment pipeline orchestrates the transition from committed source code on `main` to a live, production deployment across Cloudflare Workers and Modal GPU inference containers.
 
-The pipeline executes in a **strict, fixed 6-step sequence**:
+The pipeline executes in a **strict, fixed 7-step sequence**:
 
 ```text
-[1. Build Static Export] ──> [2. Fail-Fast Bundling] ──> [3. Apply Terraform] ──> [4. Extract Outputs] ──> [5. D1 Migrations] ──> [6. Deploy Workers]
+[1. Static Export] ──> [2. Pre-Flight Checks] ──> [3. Apply Terraform] ──> [4. Inject Secrets] ──> [5. D1 Migrations] ──> [6. Deploy Workers & Modal] ──> [7. Smoke Tests]
 ```
 
-### Why This Exact Ordering is Mandatory:
+### Why This Exact Ordering is Mandatory (KTD4):
 
-1. **Static Export First (Step 1):** The frontend static build (`apps/web`) must exist on disk before deployment because the Cloudflare asset Worker serves its compiled static files. Deploying without building first would serve stale or missing assets.
-2. **Fail-Fast Bundling (Step 2, R81):** Typechecks and bundle checks across all five Workers execute before Terraform. If a syntax error, broken import, or contract drift exists, the deployment halts immediately before modifying infrastructure.
-3. **Terraform Applies Next (Step 3, R79):** Infrastructure resources (D1 database, R2 buckets, Queues, Cron triggers) must exist before bindings or migrations can reference them.
-4. **Dynamic Output Extraction (Step 4):** Reads provisioned database and bucket identifiers dynamically from Terraform outputs (`terraform output -json`).
-5. **Database Migrations (Step 5, R26):** Schema migrations execute remotely against the provisioned D1 database (`wrangler d1 migrations apply ... --remote`) so the schema is at the target version before live code serves requests.
-6. **Worker Versions & Bindings (Step 6, KTD7):** Wrangler uploads compiled Worker versions and attaches bindings to live endpoints.
+1. **Frontend Static Export (Step 1):** The Next.js static HTML/JS/CSS bundle (`apps/web/out`) must be built before deployment because `sightforge-web-prod` serves these assets directly from Cloudflare's edge cache.
+2. **Fail-Fast Pre-Flight Verification (Step 2, R81):** Typechecks, linter checks, and unit tests execute across all TypeScript Workers and Python inference modules (`turbo run typecheck lint test` and `pytest`). If contract drift or syntax errors exist, the pipeline aborts immediately before modifying remote infrastructure.
+3. **Terraform Infrastructure Apply (Step 3, R79, R89):** Cloudflare primitives (D1 database, R2 buckets with CORS and lifecycle policies, Queues, and Cron triggers) must exist before database migrations or Worker deployments can bind to them.
+4. **Out-of-Band Secret Injection (Step 4, R76, R93):** Secrets from the inventory are injected directly into Worker vaults (`wrangler secret put`) and Modal secret stores (`modal secret set`) via standard input pipes without exposing plaintext values in logs or process tables.
+5. **Remote Database Migrations (Step 5, R26):** D1 schema migrations execute remotely (`wrangler d1 migrations apply ... --remote`) ensuring database tables and indexes match the incoming application code before traffic arrives.
+6. **Synchronized Platform Deployments (Step 6, KTD5, R83):** All 5 Cloudflare Workers and the Modal inference app deploy non-interactively, stamped with the exact Git release commit SHA (`--message "Release <SHA>"`).
+7. **Post-Deployment Smoke Test Suite (Step 7, R91):** Automated integration tests verify registration, presigned S3 upload, inference job creation, status polling, and result retrieval against the live deployment.
 
 ---
 
-## 2. Prerequisites & Environment Setup
+## 2. GitHub Environment Approval Gate (R89, R90, KTD3)
 
-Before running the deployment sequence, ensure:
+The production deployment workflow (`.github/workflows/deploy.yml`) is bound to the GitHub **`production`** environment.
 
-- Account bootstrapping in [`docs/runbooks/bootstrap.md`](bootstrap.md) is complete.
-- Required credentials from [`docs/secrets.md`](../secrets.md) are available in the environment:
-  - `CLOUDFLARE_API_TOKEN`: Scoped token with D1, R2, Workers, and Queues permissions.
-  - `CLOUDFLARE_ACCOUNT_ID`: Dedicated account identifier.
-  - `R2_ACCESS_KEY_ID` & `R2_SECRET_ACCESS_KEY`: Scoped to `sightforge-tf-state-prod`.
+### Security Controls:
+
+- **Required Reviewers (R89):** Deployments to `production` halt automatically until approved by an authorized maintainer in the GitHub Actions UI.
+- **Fork Containment (R90, KTD3):** Forked pull requests and non-deployment workflows have zero access to `production` environment secrets. Speculative plans in PRs run in uncredentialed validation mode.
+- **Concurrency Serialization:** Deployment runs are serialized (`concurrency: group: deploy-prod, cancel-in-progress: false`) to prevent race conditions or interleaved schema migrations.
 
 ---
 
-## 3. Automated Deployment
+## 3. Secret Management & Injection Inventory (R76, R93)
 
-### Full Production Deployment
+Secrets are maintained in GitHub Environment Secrets (`production`) and injected out-of-band at Step 4:
 
-To run the end-to-end automated deployment sequence:
+| Secret Name                                               | Target Consumer                       | Injection Method                             | Scope & Purpose                                                                    |
+| :-------------------------------------------------------- | :------------------------------------ | :------------------------------------------- | :--------------------------------------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`                                    | Terraform, Wrangler                   | CI Environment Variable                      | Scoped exclusively to `sightforge-prod` resources (D1, R2, Workers, Queues).       |
+| `CLOUDFLARE_ACCOUNT_ID`                                   | Terraform, Wrangler                   | CI Environment Variable                      | Target Cloudflare account identifier.                                              |
+| `R2_ACCESS_KEY_ID`<br/>`R2_SECRET_ACCESS_KEY`             | Terraform S3 Backend                  | CI Environment Variable                      | Access to remote state bucket `sightforge-tf-state-prod`.                          |
+| `JWT_SECRET`                                              | `apps/api-auth`, `apps/api-jobs`      | `wrangler secret put`                        | HMAC-SHA256 signing of 15-minute user access tokens.                               |
+| `TURNSTILE_SECRET_KEY`                                    | `apps/api-auth`                       | `wrangler secret put`                        | Server-side validation of Cloudflare Turnstile CAPTCHA tokens.                     |
+| `INFERENCE_CALLBACK_SECRET`<br/>`MODAL_CALLBACK_SECRET`   | `apps/api-jobs`, `services/inference` | `wrangler secret put`<br/>`modal secret set` | HMAC-SHA256 signature verification for inference progress and completion webhooks. |
+| `R2_MEDIA_ACCESS_KEY_ID`<br/>`R2_MEDIA_SECRET_ACCESS_KEY` | `apps/api-jobs`, `services/inference` | `wrangler secret put`<br/>`modal secret set` | Presigning direct S3 upload/download URLs for `sightforge-media-prod`.             |
+| `MODAL_TOKEN_ID`<br/>`MODAL_TOKEN_SECRET`                 | Modal CLI Deployer                    | CI Environment Variable                      | Authentication to Modal workspace for container deployment.                        |
+
+---
+
+## 4. Post-Deployment Smoke Test Suite (R91)
+
+The smoke test suite (`scripts/smoke-test.cjs`) automatically runs against the newly deployed domain (default `https://sightforge.app` or target specified by `DEPLOY_URL`):
 
 ```bash
-# Using Just task runner
-just deploy
+# Run against staging or production URL
+node scripts/smoke-test.cjs --target https://sightforge.app
 
-# Or directly via Node.js
-node infra/scripts/deploy.cjs
+# Run simulated mock tests locally
+node scripts/smoke-test.cjs --mock
 ```
 
-### Dry-Run Pre-Flight
+### Smoke Test Flow:
 
-To run static export and fail-fast bundling without mutating remote infrastructure:
+1. **Health Probe:** Asserts `GET /health` or `GET /` returns HTTP 200.
+2. **Anti-Enumeration Salt:** Asserts `GET /auth/salt?email=...` returns deterministic pseudo-salt in constant time.
+3. **Registration Flow:** Registers an ephemeral smoke test account (`smoke-test-<timestamp>@sightforge.internal`) using Cloudflare's documented Turnstile test token `1x0000000000000000000000000000000AA`.
+4. **Job Creation:** Submits `POST /jobs` with bearer token, verifying quota checks pass and an S3 SigV4 presigned upload URL is minted.
+5. **Direct Binary Upload:** Uploads a 1x1 test image binary via `PUT <uploadUrl>` to confirm R2 CORS and bucket access.
+6. **Adaptive Polling:** Queries `GET /jobs/:id/status` to verify job room and transition state projection.
+7. **Result Retrieval:** Asserts `GET /jobs/:id/results` contract conforms to expected status codes.
+
+---
+
+## 5. Automated & Manual Execution
+
+### Triggering Automated Production Deployment
+
+1. Push or merge a pull request to the `main` branch.
+2. Navigate to **Actions** $\to$ **Deploy** in the GitHub repository.
+3. When the `production` environment review prompt appears, review the commit diff and approve the deployment.
+
+### Running Local Dry-Run Pre-Flight
 
 ```bash
-just deploy-dry-run
-# or
 node infra/scripts/deploy.cjs --dry-run
 ```
 
----
-
-## 4. Manual Step-by-Step Reproduction
-
-If a specific stage needs manual execution or debugging:
-
-### Step 1: Build Frontend Static Export
+### Manual CLI Deployment (Operator Emergency)
 
 ```bash
-pnpm --filter sightforge-web build
-```
-
-### Step 2: Pre-Flight Integrity Check
-
-```bash
-pnpm turbo run typecheck lint test
-```
-
-### Step 3: Apply Infrastructure via Terraform
-
-```bash
-cd infra/terraform/environments/prod
-terraform init
-terraform apply -auto-approve
-cd ../../..
-```
-
-### Step 4: Apply Remote D1 Database Migrations
-
-```bash
-pnpm --filter @sightforge/db wrangler d1 migrations apply sightforge-d1-prod --remote
-```
-
-### Step 5: Deploy All 5 Cloudflare Workers
-
-```bash
-pnpm --filter sightforge-web exec wrangler deploy
-pnpm --filter sightforge-api-auth exec wrangler deploy
-pnpm --filter sightforge-api-jobs exec wrangler deploy
-pnpm --filter sightforge-events exec wrangler deploy
-pnpm --filter sightforge-scheduler exec wrangler deploy
+# Set required environment variables, then execute:
+node infra/scripts/deploy.cjs --strict
 ```
 
 ---
 
-## 5. Idempotency & Convergence Contract
+## 6. Rollback Playbook (R92)
 
-The deployment pipeline is designed to be **safe to re-run at any time**:
+If a production defect is discovered post-deployment:
 
-- **Terraform:** Converges to a no-op when no infrastructure changes are declared.
-- **D1 Migrations:** Checks the `__drizzle_migrations` tracking table; already applied migrations are skipped cleanly without error.
-- **Wrangler Deployments:** Deploys new immutable version IDs and smoothly promotes them without downtime or namespace conflicts.
+### Worker Instant Rollback:
 
----
+Cloudflare maintains immutable versions per deployment. To roll back an individual Worker:
 
-## 6. Rollback & Troubleshooting Playbook
+```bash
+# 1. Inspect recent version deployments
+wrangler deployments list --name sightforge-api-jobs-prod
 
-### Worker Deployment Rollback
+# 2. Rollback to the previous known-good deployment ID
+wrangler rollback <STABLE_DEPLOYMENT_ID> --name sightforge-api-jobs-prod
+```
 
-If a newly deployed Worker version introduces an error:
+### Modal Inference Rollback:
 
-1. List previous versions:
-   ```bash
-   wrangler deployments list --name sightforge-api-jobs-prod
-   ```
-2. Rollback to the previous stable version:
-   ```bash
-   wrangler rollback <DEPLOYMENT_ID> --name sightforge-api-jobs-prod
-   ```
+Redeploy the previous stable Git commit to Modal:
 
-### Database Schema Recovery
+```bash
+git checkout <PREVIOUS_STABLE_COMMIT_SHA>
+uv run modal deploy services/inference/src/sightforge_inference/endpoint.py --name sightforge-inference
+git checkout main
+```
 
-- D1 does not support arbitrary non-additive column drops automatically. All migrations in `packages/db/migrations/` must remain strictly additive.
-- To inspect current remote migration status:
-  ```bash
-  pnpm --filter @sightforge/db wrangler d1 migrations list sightforge-d1-prod --remote
-  ```
+### Database Schema Recovery:
+
+- Migrations in `packages/db/migrations/` must always be strictly additive (non-destructive).
+- Do not roll back database schema by dropping live columns; instead, apply a forward additive migration.

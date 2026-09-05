@@ -1,0 +1,119 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-production:
+    name: Deploy Production Stack (Cloudflare & Modal)
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+      INFERENCE_CALLBACK_SECRET: ${{ secrets.INFERENCE_CALLBACK_SECRET }}
+      MODAL_CALLBACK_SECRET: ${{ secrets.INFERENCE_CALLBACK_SECRET }}
+      R2_MEDIA_ACCESS_KEY_ID: ${{ secrets.R2_MEDIA_ACCESS_KEY_ID }}
+      R2_MEDIA_SECRET_ACCESS_KEY: ${{ secrets.R2_MEDIA_SECRET_ACCESS_KEY }}
+      MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+      MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+      DEPLOY_URL: ${{ vars.DEPLOY_URL || 'https://sightforge.app' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install JavaScript/TypeScript Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.8.11"
+          enable-cache: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python Dependencies
+        run: uv sync --locked --all-packages --all-groups --all-extras
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.0"
+          terraform_wrapper: false
+
+      # ─── STEP 1: FRONTEND STATIC EXPORT (KTD4) ───────────────────────────
+      - name: Step 1 - Build Frontend Static Export (apps/web)
+        run: pnpm --filter sightforge-web build
+
+      # ─── STEP 2: PRE-FLIGHT INTEGRITY CHECK (R81) ─────────────────────────
+      - name: Step 2 - Pre-Flight Integrity Check (Turbo & Pytest)
+        run: |
+          pnpm turbo run typecheck lint test
+          uv run pytest services/inference
+
+      # ─── STEP 3: TERRAFORM INFRASTRUCTURE APPLY (R79, R89) ───────────────
+      - name: Step 3 - Apply Production Cloudflare Infrastructure via Terraform
+        env:
+          TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          cd infra/terraform/environments/prod
+          terraform init -input=false
+          terraform apply -auto-approve -input=false
+
+      # ─── STEP 4: OUT-OF-BAND SECRET INJECTION (R76, R93) ───────────────────
+      - name: Step 4 - Inject Out-of-Band Worker and Modal Secrets
+        run: node scripts/inject-secrets.cjs --strict
+
+      # ─── STEP 5: REMOTE D1 DATABASE MIGRATIONS (R26) ───────────────────────
+      - name: Step 5 - Apply Remote D1 Database Migrations
+        run: pnpm --filter @sightforge/db wrangler d1 migrations apply sightforge-d1-prod --remote
+
+      # ─── STEP 6: DEPLOY WORKERS & MODAL APP (KTD5, R83) ───────────────────
+      - name: "Step 6 - Deploy Cloudflare Workers & Modal App (Tagged: ${{ github.sha }})"
+        run: |
+          echo "Deploying Cloudflare Workers with commit tag ${{ github.sha }}..."
+          pnpm --filter sightforge-web exec wrangler deploy --message "Release ${{ github.sha }}"
+          pnpm --filter sightforge-api-auth exec wrangler deploy --message "Release ${{ github.sha }}"
+          pnpm --filter sightforge-api-jobs exec wrangler deploy --message "Release ${{ github.sha }}"
+          pnpm --filter sightforge-events exec wrangler deploy --message "Release ${{ github.sha }}"
+          pnpm --filter sightforge-scheduler exec wrangler deploy --message "Release ${{ github.sha }}"
+
+          echo "Deploying Modal Inference App with commit tag ${{ github.sha }}..."
+          uv run modal deploy services/inference/src/sightforge_inference/endpoint.py --name sightforge-inference
+
+      # ─── STEP 7: POST-DEPLOYMENT SMOKE TEST (R91) ─────────────────────────
+      - name: Step 7 - Execute Post-Deployment Smoke Test Suite
+        run: node scripts/smoke-test.cjs --target ${{ env.DEPLOY_URL }}

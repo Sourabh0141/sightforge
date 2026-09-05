@@ -1,30 +1,33 @@
 #!/usr/bin/env node
 
 /**
- * SightForge Unified Deployment Pipeline (Plan 1, Unit 6)
+ * SightForge Unified Production Deployment Pipeline (Plan 5, Unit 5 / R89, R90, R91, R93, KTD4, KTD5)
  *
- * Implements the deterministic 6-step deployment sequence:
+ * Implements the deterministic 7-step deployment sequence:
  * 1. Build frontend static export (apps/web)
- * 2. Fail-fast dry-run bundling & typecheck across all 5 Workers
+ * 2. Fail-fast dry-run bundling, typecheck, & unit tests (TypeScript + Python)
  * 3. Apply Cloudflare infrastructure via Terraform (infra/terraform/environments/prod)
- * 4. Extract provisioned resource outputs (D1 ID, bucket names)
+ * 4. Inject out-of-band secrets into Workers and Modal (scripts/inject-secrets.cjs)
  * 5. Apply remote D1 database migrations (packages/db)
- * 6. Deploy live Worker versions with bindings (apps/*)
+ * 6. Deploy live Worker versions & Modal inference app tagged with commit SHA
+ * 7. Run post-deployment smoke test suite against live/staged endpoints
  */
 
 const { execSync } = require('node:child_process');
 const path = require('node:path');
-const fs = require('node:fs');
 
 const ROOT_DIR = path.resolve(__dirname, '../..');
 const TF_DIR = path.resolve(ROOT_DIR, 'infra/terraform/environments/prod');
 
 const isDryRun = process.argv.includes('--dry-run');
 const skipInfra = process.argv.includes('--skip-infra');
+const skipModal = process.argv.includes('--skip-modal');
+const skipSmoke = process.argv.includes('--skip-smoke');
+const isStrict = process.argv.includes('--strict');
 
 function logStep(stepNum, title) {
   console.log('\n' + '='.repeat(70));
-  console.log(`[Step ${stepNum}/6] ${title}`);
+  console.log(`[Step ${stepNum}/7] ${title}`);
   console.log('='.repeat(70));
 }
 
@@ -38,26 +41,41 @@ function run(command, cwd = ROOT_DIR) {
   }
 }
 
+function getCommitSha() {
+  try {
+    return execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim();
+  } catch {
+    return 'local-manual-release';
+  }
+}
+
 async function main() {
   const startTime = Date.now();
+  const commitSha = process.env.GITHUB_SHA || getCommitSha();
+
   console.log('🚀 SightForge Production Deployment Pipeline');
   console.log(`Mode: ${isDryRun ? 'DRY RUN' : 'PRODUCTION APPLY'}`);
+  console.log(`Commit SHA: ${commitSha}`);
   console.log(`Root: ${ROOT_DIR}`);
 
-  // Step 1: Build Frontend Static Export (KTD7)
+  // Step 1: Build Frontend Static Export (KTD4)
   logStep(1, 'Building Frontend Static Export (apps/web)');
   run('pnpm --filter sightforge-web build');
 
-  // Step 2: Fail-Fast Typecheck & Worker Bundling Pre-flight (R81)
-  logStep(2, 'Pre-Flight: Typecheck & Dry-Run Worker Bundling');
+  // Step 2: Fail-Fast Typecheck & Test Pre-flight (R81)
+  logStep(2, 'Pre-Flight: Typecheck, Lint, and Test Across Monorepo');
   run('pnpm turbo run typecheck lint test');
+  run('uv run pytest services/inference');
 
   if (isDryRun) {
+    console.log('\n🔍 Running dry-run secret and smoke checks...');
+    run('node scripts/inject-secrets.cjs --dry-run');
+    run('node scripts/smoke-test.cjs --mock');
     console.log('\n✅ Dry-run pre-flight passed. Halting before infrastructure mutation.');
     return;
   }
 
-  // Step 3: Apply Infrastructure via Terraform (P1 U5, R79)
+  // Step 3: Apply Infrastructure via Terraform (P1 U5, R79, R89)
   logStep(3, 'Applying Cloudflare Infrastructure via Terraform');
   if (!skipInfra) {
     run('terraform init -input=false', TF_DIR);
@@ -66,8 +84,11 @@ async function main() {
     console.log('Skipping Terraform apply (--skip-infra flag passed)');
   }
 
-  // Step 4: Extract Resource IDs
-  logStep(4, 'Extracting Provisioned Resource Identifiers');
+  // Step 4: Inject Out-of-Band Secrets (R76, R93)
+  logStep(4, 'Injecting Out-of-Band Secrets (Workers & Modal)');
+  run(`node scripts/inject-secrets.cjs ${isStrict ? '--strict' : ''}`);
+
+  // Extract Resource IDs for Database Migration
   let d1DatabaseName = 'sightforge-d1-prod';
   try {
     const tfOutputsRaw = execSync('terraform output -json', { cwd: TF_DIR, env: process.env }).toString();
@@ -84,8 +105,8 @@ async function main() {
   logStep(5, `Applying Remote D1 Migrations (${d1DatabaseName})`);
   run(`pnpm --filter @sightforge/db wrangler d1 migrations apply ${d1DatabaseName} --remote`);
 
-  // Step 6: Deploy Worker Versions & Bindings (P1 U1, R3, KTD7)
-  logStep(6, 'Deploying All 5 Cloudflare Workers (apps/*)');
+  // Step 6: Deploy Worker Versions & Modal Inference App Tagged with Commit SHA (KTD5, R83)
+  logStep(6, `Deploying Cloudflare Workers & Modal App (Release: ${commitSha})`);
   const workers = [
     'sightforge-web',
     'sightforge-api-auth',
@@ -96,13 +117,33 @@ async function main() {
 
   for (const worker of workers) {
     console.log(`\nDeploying ${worker}...`);
-    run(`pnpm --filter ${worker} exec wrangler deploy`);
+    run(`pnpm --filter ${worker} exec wrangler deploy --message "Release ${commitSha}"`);
+  }
+
+  if (!skipModal) {
+    console.log('\nDeploying Modal Inference App...');
+    run('uv run modal deploy services/inference/src/sightforge_inference/endpoint.py --name sightforge-inference');
+  } else {
+    console.log('Skipping Modal deployment (--skip-modal flag passed)');
+  }
+
+  // Step 7: Post-Deployment Smoke Test (R91)
+  logStep(7, 'Executing Post-Deployment Smoke Test Suite');
+  if (!skipSmoke) {
+    const deployUrl = process.env.DEPLOY_URL || 'https://sightforge.app';
+    run(`node scripts/smoke-test.cjs --target ${deployUrl}`);
+  } else {
+    console.log('Skipping smoke tests (--skip-smoke flag passed)');
   }
 
   const durationSec = ((Date.now() - startTime) / 1000).toFixed(2);
   console.log('\n' + '='.repeat(70));
-  console.log(`✨ Deployment completed successfully in ${durationSec}s!`);
+  console.log(`✨ Full 7-Step Deployment completed successfully in ${durationSec}s!`);
   console.log('='.repeat(70));
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = { main };
