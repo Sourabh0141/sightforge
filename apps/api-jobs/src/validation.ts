@@ -15,7 +15,7 @@ import {
   VisionTask,
 } from "@sightforge/db";
 import { HttpError } from "@sightforge/worker-kit";
-import defaultsConfig from "../../../config/defaults.json" with { type: "json" };
+import defaultsConfig from "../../../config/defaults.json";
 
 /**
  * Tasks eligible for tracking mode (R42, R43, AE4).

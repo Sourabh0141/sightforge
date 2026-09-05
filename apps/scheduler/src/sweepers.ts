@@ -14,7 +14,7 @@ import {
   users,
   JobStatus,
 } from "@sightforge/db";
-import defaultsConfig from "../../../config/defaults.json" with { type: "json" };
+import defaultsConfig from "../../../config/defaults.json";
 
 export interface SchedulerWorkerEnv {
   ENVIRONMENT: string;

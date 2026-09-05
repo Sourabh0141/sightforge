@@ -6,7 +6,7 @@
  */
 
 import { HttpError } from "@sightforge/worker-kit";
-import defaultsConfig from "../../../config/defaults.json" with { type: "json" };
+import defaultsConfig from "../../../config/defaults.json";
 
 export interface QuotaCheckResult {
   allowed: boolean;
