@@ -39,10 +39,20 @@ export interface JobsWorkerEnv extends CommonEnv {
 export interface EventsWorkerEnv extends CommonEnv {
   DB: D1Database;
   MEDIA_BUCKET: R2Bucket;
-  JOB_ROOM: DurableObjectNamespace;
+  JOB_ROOM?: DurableObjectNamespace;
+  COUNTER?: DurableObjectNamespace;
   INFERENCE_CALLBACK_SECRET?: string;
-  MODAL_TOKEN_ID?: string;
-  MODAL_TOKEN_SECRET?: string;
+  MODAL_CALLBACK_SECRET?: string;
+  MODAL_CALLBACK_PREVIOUS_SECRET?: string;
+  MODAL_TRIGGER_URL?: string;
+  MODAL_KEY?: string;
+  MODAL_SECRET?: string;
+  FRONTEND_ORIGIN?: string;
+  R2_MEDIA_ACCESS_KEY_ID?: string;
+  R2_MEDIA_SECRET_ACCESS_KEY?: string;
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  R2_ACCOUNT_ID?: string;
+  EVENTS_SERVICE_URL?: string;
 }
 
 export interface SchedulerWorkerEnv extends CommonEnv {

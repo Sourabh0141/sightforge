@@ -4,6 +4,10 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-08-29",
   "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
   "d1_databases": [
     {
       "binding": "DB",
@@ -43,6 +47,8 @@
   },
   "vars": {
     "ENVIRONMENT": "prod",
-    "FRONTEND_ORIGIN": "https://sightforge.app"
+    "FRONTEND_ORIGIN": "https://sightforge.app",
+    "MODAL_TRIGGER_URL": "https://sourabh0141--sightforge-inference-trigger-inference.modal.run",
+    "EVENTS_SERVICE_URL": "https://sightforge-events-prod.sourabh-sharma0141.workers.dev"
   }
 }

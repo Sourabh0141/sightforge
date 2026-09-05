@@ -95,6 +95,15 @@ export default {
         );
       }
 
+      // 3.5. POST /jobs/:id/process - Confirm Upload & Enqueue Processing
+      const processMatch = path.match(/^\/jobs\/([a-zA-Z0-9_-]+)\/process$/);
+      if (processMatch && method === "POST") {
+        const jobId = processMatch[1]!;
+        return authenticatedChain(request, env, async (ctx) =>
+          handleProcessJob(ctx, env, jobId),
+        );
+      }
+
       // 4. GET /jobs/:id/status - Adaptive Polling Status
       const statusMatch = path.match(/^\/jobs\/([a-zA-Z0-9_-]+)\/status$/);
       if (statusMatch && method === "GET") {
@@ -387,6 +396,57 @@ async function handleGetJobDetail(
 }
 
 /**
+ * POST /jobs/:id/process - Confirms upload completion and enqueues job for processing.
+ */
+async function handleProcessJob(
+  ctx: RequestContext,
+  env: JobsWorkerEnv,
+  jobId: string,
+): Promise<Response> {
+  const userId = ctx.userId!;
+  const db = drizzle(env.DB);
+  const job = await db
+    .select()
+    .from(jobs)
+    .where(and(eq(jobs.id, jobId), eq(jobs.userId, userId)))
+    .get();
+
+  assertOwnership(userId, job, "Job not found.");
+
+  if (
+    job.status === "queued" ||
+    job.status === "processing" ||
+    job.status === "completed"
+  ) {
+    return new Response(
+      JSON.stringify({ success: true, jobId, status: job.status }),
+      { headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  let objectHead: R2Object | null = null;
+  if (env.MEDIA_BUCKET && job.mediaKey) {
+    objectHead = await env.MEDIA_BUCKET.head(job.mediaKey);
+  }
+
+  if (env.JOBS_QUEUE && job.mediaKey) {
+    await env.JOBS_QUEUE.send({
+      key: job.mediaKey,
+      object: {
+        key: job.mediaKey,
+        size: objectHead?.size ?? 0,
+        eTag: objectHead?.etag ?? objectHead?.httpEtag,
+      },
+    });
+  }
+
+  return new Response(
+    JSON.stringify({ success: true, jobId, status: "processing_enqueued" }),
+    { headers: { "Content-Type": "application/json" } },
+  );
+}
+
+/**
  * GET /jobs/:id/status - Adaptive polling endpoint querying JobRoom DO with D1 fallback.
  */
 async function handleGetJobStatus(
@@ -401,6 +461,31 @@ async function handleGetJobStatus(
     jobId,
     userId,
   );
+
+  // Self-healing fallback: If job is still in "created" or "uploading" state but object exists in R2, enqueue to JOBS_QUEUE
+  if (
+    (statusResult.job.status === "created" ||
+      statusResult.job.status === "uploading") &&
+    env.MEDIA_BUCKET &&
+    env.JOBS_QUEUE &&
+    statusResult.job.mediaKey
+  ) {
+    try {
+      const head = await env.MEDIA_BUCKET.head(statusResult.job.mediaKey);
+      if (head) {
+        await env.JOBS_QUEUE.send({
+          key: statusResult.job.mediaKey,
+          object: {
+            key: statusResult.job.mediaKey,
+            size: head.size,
+            eTag: head.etag || head.httpEtag,
+          },
+        });
+      }
+    } catch {
+      // Ignore background self-healing failure during status read
+    }
+  }
 
   return new Response(
     JSON.stringify({

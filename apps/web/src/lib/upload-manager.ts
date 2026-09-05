@@ -129,7 +129,7 @@ export function uploadMediaJob(
         }
       };
 
-      xhr.onload = () => {
+      xhr.onload = async () => {
         if (xhr && xhr.status >= 200 && xhr.status < 300) {
           onProgress?.({
             loadedBytes: file.size,
@@ -137,6 +137,12 @@ export function uploadMediaJob(
             percentage: 100,
             stage: "complete",
           });
+          // Confirm upload completion and trigger processing queue
+          try {
+            await api.post(`/jobs/${jobCreation.jobId}/process`);
+          } catch {
+            // Non-fatal if direct process call fails; status polling self-heals
+          }
           resolve();
         } else {
           reject(

@@ -1,48 +1,49 @@
-# PR: fix(web): allow R2 storage in CSP connect-src and align vision mode contract
+# PR: fix(pipeline): enable worker observability and add upload completion processing trigger
 
 ## Branch
 
-`fix/web-r2-csp-and-job-payload-contract`
+`fix/worker-observability-and-processing-pipeline`
 
 ## Title
 
-`fix(web): allow R2 storage in CSP connect-src and align vision mode contract`
+`fix(pipeline): enable worker observability and add upload completion processing trigger`
 
 ## Description
 
 ### Summary
 
-Resolves two remaining upload and routing issues on production:
-
-1. Adds `https://*.r2.cloudflarestorage.com` to Content Security Policy (`connect-src`) in `apps/web/public/_headers` to unblock direct browser-to-R2 binary PUT uploads.
-2. Normalizes `task` and `mode` values (`per-frame` vs `per_frame`, `instance-segmentation` vs `instance_segmentation`) between `@sightforge/web` and `@sightforge/api-jobs` validation.
-3. Normalizes trailing slashes in `apps/web/src/index.ts` and `apps/api-jobs/src/index.ts` so `GET /jobs/` cleanly renders the UI page rather than failing on the API router.
+This PR addresses the inference pipeline stuck in the "Uploading" state, fixes the WebSocket live connection rejection on `*.workers.dev` subdomains, and enables production-grade Cloudflare Workers observability/telemetry across all microservices.
 
 ### Root Cause Analysis
 
-1. **R2 Binary Upload Blocked by CSP**:
-   - When a job is created, the backend provides an S3 SigV4 presigned upload URL hosted on `https://<account_id>.r2.cloudflarestorage.com`.
-   - The browser's Content Security Policy in `_headers` defined `connect-src` without `https://*.r2.cloudflarestorage.com`.
-   - Direct binary PUT requests to R2 were rejected by the browser's CSP engine with: `Refused to connect because it violates the document's Content Security Policy`.
+1. **Job Pipeline Stuck at Uploading**:
+   - The frontend (`uploadMediaJob`) creates the job in D1 (`created` state), then issues a direct binary `PUT` to R2 storage.
+   - Without active R2 Event Notifications, `sightforge-jobs-queue-prod` never receives an event upon object write completion, leaving the job permanently in the initial upload state.
+   - **Solution**:
+     - **Explicit Completion Trigger**: `upload-manager.ts` invokes `POST /jobs/:id/process` upon successful R2 `PUT`, immediately queuing the media object for validation and inference.
+     - **Self-Healing Fallback**: `GET /jobs/:id/status` automatically verifies R2 binary existence when queried in `created`/`uploading` state and enqueues if unqueued.
+     - **Flexible Consumer**: `sightforge-events` consumer accepts both `created` and `uploading` states, validates magic bytes, and generates presigned download/upload grants for Modal.
 
-2. **Job Creation Validation 400**:
-   - The frontend was sending `mode: "per_frame"` (with underscore), whereas `@sightforge/db` and `@sightforge/api-jobs` schema enforce `PROCESSING_MODES = ["per-frame", "tracking"]` (with hyphen).
-   - This caused `POST /jobs` to throw `HTTP 400 invalid-input: Invalid processing mode`.
+2. **WebSocket Live Connection Failure (`*.workers.dev` Origin Mismatch)**:
+   - When connecting to `wss://<app>.workers.dev/jobs/<id>/live`, the browser sends `Origin: https://<app>.workers.dev`.
+   - `JobRoom.handleWebSocketUpgrade` performed a strict array `.includes()` check against `DEFAULT_ALLOWED_ORIGINS` instead of `isOriginAllowed(origin, allowedOrigins)` (which permits `*.workers.dev` subdomains), resulting in `403 Forbidden: Origin not allowed`.
+   - **Solution**: Replaced strict array check with `isOriginAllowed` in `JobRoom`.
 
-3. **Trailing Slash Page Routing**:
-   - When navigating to `/jobs/` with a trailing slash, `isApiRoute` matched `pathname.startsWith("/jobs/")` and proxied the request to `JOBS_SERVICE` instead of `ASSETS`.
+3. **Microservice Observability & Logging**:
+   - Added Cloudflare native worker observability configuration (`"observability": { "enabled": true, "head_sampling_rate": 1 }`) across `api-auth`, `api-jobs`, `events`, `scheduler`, and `web` to provide real-time logs and telemetry in Cloudflare Dashboard.
 
 ### What Changed
 
-- **`apps/web/public/_headers`**: Added `https://*.r2.cloudflarestorage.com` to `connect-src`.
-- **`apps/web/src/lib/upload-manager.ts`**: Normalized `task` and `mode` to hyphenated strings before issuing `POST /jobs`.
-- **`apps/api-jobs/src/validation.ts`**: Added underscore-to-hyphen normalization to tolerate client variations.
-- **`apps/web/src/index.ts`**: Normalized trailing slashes in `isApiRoute` so `/jobs/` page navigation falls through to `env.ASSETS`.
-- **`apps/api-jobs/src/index.ts`**: Normalized path parameter trailing slash.
-- **Test Suites**: Updated unit tests across `web` and `api-jobs` to verify CSP directives and mode formatting.
+- **`apps/api-jobs/wrangler.jsonc`**, **`apps/api-auth/wrangler.jsonc`**, **`apps/events/wrangler.jsonc`**, **`apps/scheduler/wrangler.jsonc`**, **`apps/web/wrangler.jsonc`**: Added `observability` configuration block.
+- **`apps/web/src/lib/upload-manager.ts`**: Dispatches `POST /jobs/:id/process` upon binary upload completion.
+- **`apps/api-jobs/src/index.ts`**: Registered and implemented `handleProcessJob` endpoint; added self-healing queue dispatch in `handleGetJobStatus`.
+- **`apps/api-jobs/src/job-room.ts`**: Switched WebSocket origin validation to `isOriginAllowed`.
+- **`apps/events/src/index.ts`**: Updated queue consumer to process `created` and `uploading` jobs and generate presigned storage URLs for inference worker.
+- **`apps/events/src/dispatch.ts`**: Included presigned storage URLs and `callbackBaseUrl` in the Modal dispatch payload.
+- **`packages/worker-kit/src/storage.ts`**: Added shared SigV4 presigner.
+- **`packages/worker-kit/src/types.ts`**: Added missing env typings for `EventsWorkerEnv`.
 
 ### Verification
 
-- **Monorepo Tests**: 31/31 tasks passed (`pnpm turbo run test typecheck lint`).
-- **Formatting**: 100% Prettier compliant (`pnpm run format:check`).
-- **Live Playwright Inspection**: Confirmed `POST /jobs` returns `HTTP 201 Created` with valid presigned R2 upload URL and identified the exact CSP violation for `*.r2.cloudflarestorage.com`.
+- **Monorepo Build & Tests**: All 31 turbo tasks passed cleanly (`pnpm turbo run test typecheck lint`).
+- **Formatting**: 100% Prettier verified (`pnpm run format:check`).

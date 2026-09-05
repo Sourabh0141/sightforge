@@ -9,7 +9,11 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { jobs, JobStatus } from "@sightforge/db";
-import { DEFAULT_ALLOWED_ORIGINS, JobsWorkerEnv } from "@sightforge/worker-kit";
+import {
+  DEFAULT_ALLOWED_ORIGINS,
+  isOriginAllowed,
+  JobsWorkerEnv,
+} from "@sightforge/worker-kit";
 
 export interface LiveJobState {
   id: string;
@@ -174,7 +178,7 @@ export class JobRoom {
     ];
 
     // A. Validate Origin (R115)
-    if (!origin || !allowedOrigins.includes(origin)) {
+    if (!origin || !isOriginAllowed(origin, allowedOrigins)) {
       return new Response(
         JSON.stringify({ error: "Forbidden: Origin not allowed." }),
         { status: 403, headers: { "Content-Type": "application/json" } },

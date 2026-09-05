@@ -12,6 +12,10 @@ export interface DispatchInferenceOptions {
   triggerUrl?: string;
   modalKey?: string;
   modalSecret?: string;
+  mediaGetUrl?: string;
+  resultPutUrl?: string;
+  denseArtifactPutUrl?: string;
+  callbackBaseUrl?: string;
 }
 
 export interface DispatchInferenceResult {
@@ -51,6 +55,10 @@ export async function dispatchInference(
       resultKey: job.resultKey,
       denseArtifactKey: job.denseArtifactKey,
       correlationId: job.correlationId,
+      mediaGetUrl: options.mediaGetUrl,
+      resultPutUrl: options.resultPutUrl,
+      denseArtifactPutUrl: options.denseArtifactPutUrl,
+      callbackBaseUrl: options.callbackBaseUrl,
     };
 
     const response = await fetch(triggerUrl, {
