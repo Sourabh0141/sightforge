@@ -7,9 +7,6 @@ resource "cloudflare_workers_script" "this" {
   compatibility_flags = var.compatibility_flags
 
   lifecycle {
-    ignore_changes = [
-      content,
-      main_module
-    ]
+    ignore_changes = all
   }
 }
