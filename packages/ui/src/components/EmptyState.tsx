@@ -127,9 +127,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <div className="flex flex-wrap items-center justify-center gap-3">
         {defaults.primaryLabel &&
           (defaults.primaryHref ? (
-            <a href={defaults.primaryHref}>
-              <Button variant="primary">{defaults.primaryLabel}</Button>
-            </a>
+            <Button href={defaults.primaryHref} variant="primary">
+              {defaults.primaryLabel}
+            </Button>
           ) : (
             <Button variant="primary" onClick={onPrimaryAction}>
               {defaults.primaryLabel}

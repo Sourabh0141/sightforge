@@ -71,29 +71,24 @@ export const CapacityState: React.FC<CapacityStateProps> = ({
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <a href="/gallery" className="w-full sm:w-auto">
-            <Button
-              variant="primary"
-              className="w-full sm:w-auto"
-              rightIcon={<ArrowRightIcon className="h-4 w-4" />}
-            >
-              View Demo Gallery
-            </Button>
-          </a>
-          <a
+          <Button
+            href="/gallery"
+            variant="primary"
+            className="w-full sm:w-auto"
+            rightIcon={<ArrowRightIcon className="h-4 w-4" />}
+          >
+            View Demo Gallery
+          </Button>
+          <Button
             href={sourceRepoUrl}
             target="_blank"
             rel="noopener noreferrer"
+            variant="secondary"
             className="w-full sm:w-auto"
+            rightIcon={<ExternalLinkIcon className="h-4 w-4" />}
           >
-            <Button
-              variant="secondary"
-              className="w-full sm:w-auto"
-              rightIcon={<ExternalLinkIcon className="h-4 w-4" />}
-            >
-              Read Source
-            </Button>
-          </a>
+            Read Source
+          </Button>
         </div>
 
         {/* Past results link */}

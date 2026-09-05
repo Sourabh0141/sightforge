@@ -29,6 +29,8 @@ export interface JobsWorkerEnv extends CommonEnv {
   JWT_SECRET?: string;
   R2_MEDIA_ACCESS_KEY_ID?: string;
   R2_MEDIA_SECRET_ACCESS_KEY?: string;
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  R2_ACCOUNT_ID?: string;
   MODAL_TOKEN_ID?: string;
   MODAL_TOKEN_SECRET?: string;
   INFERENCE_CALLBACK_SECRET?: string;

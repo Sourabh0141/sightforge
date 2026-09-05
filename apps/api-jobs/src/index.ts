@@ -213,6 +213,10 @@ async function handleCreateJob(
           objectKey: `users/${userId}/media/${replayedBody.jobId}.png`,
           accessKeyId: env.R2_MEDIA_ACCESS_KEY_ID || "dummy_key",
           secretAccessKey: env.R2_MEDIA_SECRET_ACCESS_KEY || "dummy_secret",
+          accountId:
+            env.CLOUDFLARE_ACCOUNT_ID ||
+            env.R2_ACCOUNT_ID ||
+            "dummy_account_id",
           contentType:
             replayedBody.mediaType === "video" ? "video/mp4" : "image/png",
         });
@@ -244,6 +248,8 @@ async function handleCreateJob(
     objectKey: config.mediaKey,
     accessKeyId: env.R2_MEDIA_ACCESS_KEY_ID || "dummy_key",
     secretAccessKey: env.R2_MEDIA_SECRET_ACCESS_KEY || "dummy_secret",
+    accountId:
+      env.CLOUDFLARE_ACCOUNT_ID || env.R2_ACCOUNT_ID || "dummy_account_id",
     contentType: uploadContentType,
     expiresInSeconds: 900, // 15 minutes
   });
@@ -508,6 +514,8 @@ async function handleGetJobResults(
     objectKey: job.resultKey,
     accessKeyId: env.R2_MEDIA_ACCESS_KEY_ID || "dummy_key",
     secretAccessKey: env.R2_MEDIA_SECRET_ACCESS_KEY || "dummy_secret",
+    accountId:
+      env.CLOUDFLARE_ACCOUNT_ID || env.R2_ACCOUNT_ID || "dummy_account_id",
     contentType: "application/json",
     contentDisposition: `attachment; filename="result-${jobId}.json"`,
     expiresInSeconds: 3600, // 1 hour
@@ -556,6 +564,8 @@ async function handleGetDenseArtifact(
     objectKey: job.denseArtifactKey,
     accessKeyId: env.R2_MEDIA_ACCESS_KEY_ID || "dummy_key",
     secretAccessKey: env.R2_MEDIA_SECRET_ACCESS_KEY || "dummy_secret",
+    accountId:
+      env.CLOUDFLARE_ACCOUNT_ID || env.R2_ACCOUNT_ID || "dummy_account_id",
     contentType: "image/png",
     contentDisposition: "inline",
     expiresInSeconds: 3600,

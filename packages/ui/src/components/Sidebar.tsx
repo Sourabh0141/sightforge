@@ -93,15 +93,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </a>
 
         {/* Primary New Job CTA Button */}
-        <a href="/new" className="block">
-          <Button
-            variant="primary"
-            className="w-full justify-center shadow-sm"
-            leftIcon={<PlusCircleIcon className="h-4 w-4" />}
-          >
-            New job
-          </Button>
-        </a>
+        <Button
+          href="/new"
+          variant="primary"
+          className="w-full justify-center shadow-sm block"
+          leftIcon={<PlusCircleIcon className="h-4 w-4" />}
+        >
+          New job
+        </Button>
 
         {/* Navigation list */}
         <nav className="space-y-1">

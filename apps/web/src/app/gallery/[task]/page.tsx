@@ -79,11 +79,9 @@ export default async function GalleryTaskPage({ params }: GalleryTaskProps) {
           >
             Sign in
           </a>
-          <a href="/signup">
-            <Button size="sm" variant="primary">
-              Run your own
-            </Button>
-          </a>
+          <Button href="/signup" size="sm" variant="primary">
+            Run your own
+          </Button>
         </div>
       </header>
 
@@ -119,11 +117,9 @@ export default async function GalleryTaskPage({ params }: GalleryTaskProps) {
         ) : (
           <div className="bg-[#12151C] border border-[#252B37] rounded-[8px] p-8 text-center space-y-4">
             <p className="text-sm text-[#9AA3B2]">Task fixture not found.</p>
-            <a href="/gallery">
-              <Button variant="secondary" size="sm">
-                Back to Gallery
-              </Button>
-            </a>
+            <Button href="/gallery" variant="secondary" size="sm">
+              Back to Gallery
+            </Button>
           </div>
         )}
       </main>

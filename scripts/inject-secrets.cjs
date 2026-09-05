@@ -33,6 +33,7 @@ const WORKER_SECRET_MAP = {
     { envVar: 'INFERENCE_CALLBACK_SECRET', required: true },
     { envVar: 'R2_MEDIA_ACCESS_KEY_ID', required: true },
     { envVar: 'R2_MEDIA_SECRET_ACCESS_KEY', required: true },
+    { envVar: 'CLOUDFLARE_ACCOUNT_ID', required: false },
     { envVar: 'MODAL_API_URL', required: false },
     { envVar: 'MODAL_AUTH_TOKEN', required: false },
   ],
