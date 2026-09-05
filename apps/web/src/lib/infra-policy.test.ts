@@ -82,4 +82,22 @@ variable "api_secret" {
       fs.rmSync(mockDir, { recursive: true, force: true });
     }
   });
+
+  it("validates static asset _headers Content-Security-Policy compliance (R110)", () => {
+    const headersPath = path.resolve(process.cwd(), "public/_headers");
+    expect(fs.existsSync(headersPath)).toBe(true);
+    const content = fs.readFileSync(headersPath, "utf-8");
+
+    // Ensure CSP is present
+    expect(content).toContain("Content-Security-Policy:");
+    // Ensure Next.js inline RSC hydration scripts are allowed
+    expect(content).toContain(
+      "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
+    );
+    // Ensure WebAssembly worker derivation is permitted
+    expect(content).toContain("worker-src 'self' blob:");
+    // Ensure Cloudflare workers.dev domains are allowed for API & WebSocket streaming
+    expect(content).toContain("https://*.workers.dev");
+    expect(content).toContain("wss://*.workers.dev");
+  });
 });
