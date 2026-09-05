@@ -74,11 +74,11 @@ describe("Deployment Pipeline & Out-of-Band Secrets (R76, R93, KTD4)", () => {
 
   it("runs secret injection in dry-run mode safely without mutations", () => {
     const mockEnv = {
-      JWT_SECRET: "test-jwt-secret-32-chars-long-abc!",
+      JWT_SECRET: "mock-jwt-secret-key-32-chars-long!",
       TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
-      INFERENCE_CALLBACK_SECRET: "test-callback-secret-32-chars-1234",
-      R2_MEDIA_ACCESS_KEY_ID: "ak-test-r2-key-id",
-      R2_MEDIA_SECRET_ACCESS_KEY: "as-test-r2-secret-key-12345",
+      INFERENCE_CALLBACK_SECRET: "mock-inference-callback-secret-32b",
+      R2_MEDIA_ACCESS_KEY_ID: "mock-r2-media-access-key-id",
+      R2_MEDIA_SECRET_ACCESS_KEY: "mock-r2-media-secret-access-key",
       MODAL_KEY: "mock-modal-key",
       MODAL_SECRET: "mock-modal-secret",
     };

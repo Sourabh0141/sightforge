@@ -2,9 +2,16 @@
 useDefault = true
 
 [allowlist]
-description = "Global allowlist for lockfiles and static docs"
+description = "Global allowlist for lockfiles, test suites, and static docs"
 paths = [
   '''pnpm-lock\.yaml''',
   '''uv\.lock''',
   '''\.prettierignore''',
+  '''apps/web/src/lib/deploy-pipeline\.test\.ts''',
+]
+stopwords = [
+  "mock-",
+  "dummy-",
+  "test-",
+  "1x0000000000000000000000000000000AA",
 ]
