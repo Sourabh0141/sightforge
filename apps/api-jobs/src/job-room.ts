@@ -142,10 +142,13 @@ export class JobRoom {
       return this.handleStateUpdate(request);
     }
 
-    // 4. Ticket Registration (POST /mint-ticket)
+    // 4. Ticket Registration (POST /mint-ticket or POST /register-ticket)
     if (
       method === "POST" &&
-      (path === "/mint-ticket" || path.endsWith("/mint-ticket"))
+      (path === "/mint-ticket" ||
+        path.endsWith("/mint-ticket") ||
+        path === "/register-ticket" ||
+        path.endsWith("/register-ticket"))
     ) {
       return this.handleMintTicket(request);
     }

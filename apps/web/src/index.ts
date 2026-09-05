@@ -30,6 +30,22 @@ export function extractSubdomain(hostname: string): string | null {
 }
 
 export function isApiRoute(pathname: string, request: Request): boolean {
+  // Static asset files should never be reverse-proxied to API services
+  if (
+    pathname.endsWith(".txt") ||
+    pathname.endsWith(".html") ||
+    pathname.endsWith(".js") ||
+    pathname.endsWith(".css") ||
+    pathname.endsWith(".map") ||
+    pathname.endsWith(".ico") ||
+    pathname.endsWith(".png") ||
+    pathname.endsWith(".jpg") ||
+    pathname.endsWith(".svg") ||
+    pathname.endsWith(".webp")
+  ) {
+    return false;
+  }
+
   if (pathname.startsWith("/auth")) {
     return true;
   }

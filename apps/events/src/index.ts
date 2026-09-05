@@ -339,7 +339,10 @@ async function handleProgressCallback(
 
   // 1. Authenticate HMAC Signature (R46, AE12)
   const authResult = await verifyModalCallbackSignature({
-    activeSecret: env.MODAL_CALLBACK_SECRET || "mock-secret",
+    activeSecret:
+      env.MODAL_CALLBACK_SECRET ||
+      env.INFERENCE_CALLBACK_SECRET ||
+      "mock-secret",
     previousSecret: env.MODAL_CALLBACK_PREVIOUS_SECRET,
     signatureHeader,
     timestampHeader,
@@ -423,7 +426,10 @@ async function handleCompleteCallback(
 
   // 1. Authenticate HMAC Signature (R46, AE12)
   const authResult = await verifyModalCallbackSignature({
-    activeSecret: env.MODAL_CALLBACK_SECRET || "mock-secret",
+    activeSecret:
+      env.MODAL_CALLBACK_SECRET ||
+      env.INFERENCE_CALLBACK_SECRET ||
+      "mock-secret",
     previousSecret: env.MODAL_CALLBACK_PREVIOUS_SECRET,
     signatureHeader,
     timestampHeader,
