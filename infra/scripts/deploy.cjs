@@ -107,7 +107,7 @@ async function main() {
 
   // Step 5: Remote Database Migrations (P1 U3, R26)
   logStep(5, `Applying Remote D1 Migrations (${d1DatabaseName})`);
-  run(`pnpm --filter @sightforge/db wrangler d1 migrations apply ${d1DatabaseName} --remote`);
+  run(`pnpm --filter @sightforge/db exec wrangler d1 migrations apply ${d1DatabaseName} --remote`);
 
   // Step 6: Deploy Worker Versions & Modal Inference App Tagged with Commit SHA (KTD5, R83)
   logStep(6, `Deploying Cloudflare Workers & Modal App (Release: ${commitSha})`);
