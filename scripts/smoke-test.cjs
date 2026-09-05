@@ -364,8 +364,8 @@ async function runSmokeTests(options = {}) {
           ...authHeader,
         },
       });
-      // In a fresh job before completion, 200, 202, or 404 (not ready) is an expected API contract response
-      const isValidStatus = [200, 202, 404].includes(resultsRes.status);
+      // In a fresh job before completion, 200, 202, 400 (not completed), or 404 is an expected API contract response
+      const isValidStatus = [200, 202, 400, 404].includes(resultsRes.status);
       if (!isValidStatus) {
         throw new Error(`Result endpoint returned unexpected status: ${resultsRes.status}`);
       }

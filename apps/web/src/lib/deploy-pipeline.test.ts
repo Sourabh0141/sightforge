@@ -250,6 +250,83 @@ describe("Post-Deployment Smoke Test Suite (R91)", () => {
     expect(results.stages.status?.jobStatus).toBe("created");
   });
 
+  it("accepts HTTP 400 (results not ready) as valid API contract in Stage 7", async () => {
+    const mockResponses: Record<string, unknown> = {
+      "/health": { status: 200, body: { status: "ready" } },
+      "/auth/salt": {
+        status: 200,
+        body: { clientSalt: "11223344556677889900aabbccddeeff" },
+      },
+      "/auth/register": {
+        status: 201,
+        body: {
+          accessToken: "mock-jwt-token-12345",
+          user: { id: "usr_smoke_test_123", email: "smoke@internal" },
+        },
+      },
+      "/jobs": {
+        status: 201,
+        body: {
+          jobId: "job_smoke_test_456",
+          uploadUrl: "https://r2.sightforge.internal/upload/job_456",
+          status: "created",
+        },
+      },
+      "https://r2.sightforge.internal/upload/job_456": {
+        status: 200,
+        body: "",
+      },
+      "/jobs/job_smoke_test_456/status": {
+        status: 200,
+        body: { status: "created", progress: 0 },
+      },
+      "/jobs/job_smoke_test_456/results": {
+        status: 400,
+        body: {
+          error: {
+            code: "invalid-input",
+            message: "Results are only available for completed jobs.",
+          },
+        },
+      },
+    };
+
+    const mockFetch = async (url: string) => {
+      const routes = Object.keys(mockResponses).sort(
+        (a, b) => b.length - a.length,
+      );
+      for (const route of routes) {
+        if (url.includes(route)) {
+          const resp = mockResponses[route] as {
+            status: number;
+            body: unknown;
+          };
+          return {
+            ok: resp.status >= 200 && resp.status < 300,
+            status: resp.status,
+            json: async () => resp.body,
+            text: async () => JSON.stringify(resp.body),
+          };
+        }
+      }
+      return {
+        ok: false,
+        status: 404,
+        json: async () => ({ error: "Not Found" }),
+        text: async () => "Not Found",
+      };
+    };
+
+    const results = (await runSmokeTests({
+      targetUrl: "https://api.sightforge.app",
+      fetchFn: mockFetch,
+    })) as SmokeTestResult;
+
+    expect(results.passed).toBe(true);
+    expect(results.stages.results?.status).toBe(400);
+    expect(results.stages.results?.resultsAccessible).toBe(true);
+  });
+
   it("handles endpoint errors gracefully and reports failure", async () => {
     const failingFetch = async () => {
       return {
