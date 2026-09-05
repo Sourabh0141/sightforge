@@ -40,7 +40,10 @@ export { Counter } from "@sightforge/worker-kit";
 export default {
   async fetch(request: Request, env: JobsWorkerEnv): Promise<Response> {
     const url = new URL(request.url);
-    const path = url.pathname;
+    const path =
+      url.pathname.length > 1 && url.pathname.endsWith("/")
+        ? url.pathname.slice(0, -1)
+        : url.pathname;
     const method = request.method;
 
     // Health check endpoint
