@@ -126,7 +126,7 @@ Redeploy the previous stable Git commit to Modal:
 
 ```bash
 git checkout <PREVIOUS_STABLE_COMMIT_SHA>
-uv run modal deploy services/inference/src/sightforge_inference/endpoint.py --name sightforge-inference
+uv run --package sightforge-inference modal deploy -m sightforge_inference.endpoint --name sightforge-inference
 git checkout main
 ```
 

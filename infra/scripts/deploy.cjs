@@ -126,7 +126,9 @@ async function main() {
 
   if (!skipModal) {
     console.log('\nDeploying Modal Inference App...');
-    run('uv run modal deploy services/inference/src/sightforge_inference/endpoint.py --name sightforge-inference');
+    run(
+      'uv run --package sightforge-inference modal deploy -m sightforge_inference.endpoint --name sightforge-inference',
+    );
   } else {
     console.log('Skipping Modal deployment (--skip-modal flag passed)');
   }
