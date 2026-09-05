@@ -112,11 +112,11 @@ async function main() {
   // Step 6: Deploy Worker Versions & Modal Inference App Tagged with Commit SHA (KTD5, R83)
   logStep(6, `Deploying Cloudflare Workers & Modal App (Release: ${commitSha})`);
   const workers = [
-    'sightforge-web',
-    'sightforge-api-auth',
     'sightforge-api-jobs',
+    'sightforge-api-auth',
     'sightforge-events',
     'sightforge-scheduler',
+    'sightforge-web',
   ];
 
   for (const worker of workers) {
