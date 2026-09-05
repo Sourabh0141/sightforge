@@ -19,6 +19,16 @@ locals {
 resource "cloudflare_d1_database" "database" {
   account_id = var.cloudflare_account_id
   name       = local.d1_name
+
+  read_replication = {
+    mode = "disabled"
+  }
+
+  lifecycle {
+    ignore_changes = [
+      read_replication
+    ]
+  }
 }
 
 # 2. Cloudflare R2 Media Storage Bucket (R3, R79)
