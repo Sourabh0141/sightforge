@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from ultralytics import YOLO  # type: ignore[attr-defined]
 
 from ..adapter import InferenceConfig, ModelAdapter
 from ..config import ModelVariant, VisionTask
@@ -40,6 +39,8 @@ class BaseYOLOAdapter(ModelAdapter, ABC):
         """Loads YOLO model checkpoint from local verified path."""
         if not weights_path.exists():
             raise FileNotFoundError(f"Weight file not found at: {weights_path}")
+        from ultralytics import YOLO  # type: ignore[attr-defined]
+
         self._model = YOLO(str(weights_path))
 
     def _create_summary(

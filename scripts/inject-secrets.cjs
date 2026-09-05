@@ -39,6 +39,10 @@ const WORKER_SECRET_MAP = {
   ],
   'sightforge-events-prod': [
     { envVar: 'INFERENCE_CALLBACK_SECRET', required: true },
+    { envVar: 'MODAL_CALLBACK_SECRET', alias: 'INFERENCE_CALLBACK_SECRET', required: false },
+    { envVar: 'R2_MEDIA_ACCESS_KEY_ID', required: false },
+    { envVar: 'R2_MEDIA_SECRET_ACCESS_KEY', required: false },
+    { envVar: 'CLOUDFLARE_ACCOUNT_ID', required: false },
   ],
   'sightforge-scheduler-prod': [
     { envVar: 'JWT_SECRET', required: false },

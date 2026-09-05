@@ -1,49 +1,53 @@
-# PR: fix(pipeline): enable worker observability and add upload completion processing trigger
+# PR: fix(pipeline): resolve Modal ultralytics missing module, JobRoom ticket route, and static routing
 
 ## Branch
 
-`fix/worker-observability-and-processing-pipeline`
+`fix/ws-ticket-route-and-static-routing`
 
 ## Title
 
-`fix(pipeline): enable worker observability and add upload completion processing trigger`
+`fix(pipeline): resolve Modal ultralytics missing module, JobRoom ticket route, and static routing`
 
 ## Description
 
 ### Summary
 
-This PR addresses the inference pipeline stuck in the "Uploading" state, fixes the WebSocket live connection rejection on `*.workers.dev` subdomains, and enables production-grade Cloudflare Workers observability/telemetry across all microservices.
+Resolves issues discovered during live end-to-end testing across Cloudflare and Modal:
+
+1. **Modal `ModuleNotFoundError: No module named 'ultralytics'`**:
+   - Added `torch`, `torchvision`, `ultralytics`, `opencv-python-headless`, and system libraries (`libgl1-mesa-glx`, `libglib2.0-0`) to `cpu_image` in `services/inference/src/sightforge_inference/app.py`.
+   - Made `from ultralytics import YOLO` import lazy inside `BaseYOLOAdapter.load_model` in `services/inference/src/sightforge_inference/tasks/base.py`.
+2. **WebSocket Ticket 401**:
+   - Supported `/register-ticket` path alias in `JobRoom` Durable Object matching the `transitions.ts` caller.
+3. **Static Asset 404s**:
+   - Excluded static asset file extensions (`.txt`, `.html`, `.js`, `.css`, etc.) from being reverse-proxied to `api-jobs` in `apps/web/src/index.ts`.
+4. **Modal Callback & Storage Secrets**:
+   - Injected `R2_MEDIA_ACCESS_KEY_ID`, `R2_MEDIA_SECRET_ACCESS_KEY`, `CLOUDFLARE_ACCOUNT_ID`, and `MODAL_CALLBACK_SECRET` into `sightforge-events-prod` worker in `scripts/inject-secrets.cjs`.
 
 ### Root Cause Analysis
 
-1. **Job Pipeline Stuck at Uploading**:
-   - The frontend (`uploadMediaJob`) creates the job in D1 (`created` state), then issues a direct binary `PUT` to R2 storage.
-   - Without active R2 Event Notifications, `sightforge-jobs-queue-prod` never receives an event upon object write completion, leaving the job permanently in the initial upload state.
-   - **Solution**:
-     - **Explicit Completion Trigger**: `upload-manager.ts` invokes `POST /jobs/:id/process` upon successful R2 `PUT`, immediately queuing the media object for validation and inference.
-     - **Self-Healing Fallback**: `GET /jobs/:id/status` automatically verifies R2 binary existence when queried in `created`/`uploading` state and enqueues if unqueued.
-     - **Flexible Consumer**: `sightforge-events` consumer accepts both `created` and `uploading` states, validates magic bytes, and generates presigned download/upload grants for Modal.
+1. **Modal Function Hydration Failure**:
+   - When Modal starts the container for `@app.function(image=cpu_image) trigger_inference`, it hydrates the Python module by importing `sightforge_inference`.
+   - `__init__.py` imports `endpoint.py` -> `infer.py` -> `tasks/base.py`, which had a top-level `from ultralytics import YOLO`.
+   - `cpu_image` omitted `ultralytics` and `torch`, causing container startup to immediately crash with `ModuleNotFoundError: No module named 'ultralytics'`.
+   - **Fix**: Installed complete vision runtime into `cpu_image` and moved `YOLO` import inside `load_model`.
 
-2. **WebSocket Live Connection Failure (`*.workers.dev` Origin Mismatch)**:
-   - When connecting to `wss://<app>.workers.dev/jobs/<id>/live`, the browser sends `Origin: https://<app>.workers.dev`.
-   - `JobRoom.handleWebSocketUpgrade` performed a strict array `.includes()` check against `DEFAULT_ALLOWED_ORIGINS` instead of `isOriginAllowed(origin, allowedOrigins)` (which permits `*.workers.dev` subdomains), resulting in `403 Forbidden: Origin not allowed`.
-   - **Solution**: Replaced strict array check with `isOriginAllowed` in `JobRoom`.
+2. **JobRoom Ticket Route Mismatch**:
+   - `transitions.ts` called `http://job-room/register-ticket` when minting live WebSocket tickets.
+   - `JobRoom.fetch` router only checked `path === "/mint-ticket"`, causing ticket registration to return 404.
+   - **Fix**: Added `/register-ticket` alongside `/mint-ticket` in `JobRoom.fetch`.
 
-3. **Microservice Observability & Logging**:
-   - Added Cloudflare native worker observability configuration (`"observability": { "enabled": true, "head_sampling_rate": 1 }`) across `api-auth`, `api-jobs`, `events`, `scheduler`, and `web` to provide real-time logs and telemetry in Cloudflare Dashboard.
+3. **Next.js Static Asset Routing (`/jobs/index.txt`)**:
+   - Next.js client router cache prefetching requests `/jobs/index.txt`.
+   - `isApiRoute` matched `pathname.startsWith("/jobs/")` and proxied to `api-jobs` (which returned 404).
+   - **Fix**: Added static asset file extension bypass in `isApiRoute`.
 
-### What Changed
-
-- **`apps/api-jobs/wrangler.jsonc`**, **`apps/api-auth/wrangler.jsonc`**, **`apps/events/wrangler.jsonc`**, **`apps/scheduler/wrangler.jsonc`**, **`apps/web/wrangler.jsonc`**: Added `observability` configuration block.
-- **`apps/web/src/lib/upload-manager.ts`**: Dispatches `POST /jobs/:id/process` upon binary upload completion.
-- **`apps/api-jobs/src/index.ts`**: Registered and implemented `handleProcessJob` endpoint; added self-healing queue dispatch in `handleGetJobStatus`.
-- **`apps/api-jobs/src/job-room.ts`**: Switched WebSocket origin validation to `isOriginAllowed`.
-- **`apps/events/src/index.ts`**: Updated queue consumer to process `created` and `uploading` jobs and generate presigned storage URLs for inference worker.
-- **`apps/events/src/dispatch.ts`**: Included presigned storage URLs and `callbackBaseUrl` in the Modal dispatch payload.
-- **`packages/worker-kit/src/storage.ts`**: Added shared SigV4 presigner.
-- **`packages/worker-kit/src/types.ts`**: Added missing env typings for `EventsWorkerEnv`.
+4. **Event Worker Secrets Scoping**:
+   - `sightforge-events-prod` requires R2 access keys to presign media downloads and result uploads for Modal.
+   - **Fix**: Added R2 and callback secrets to `WORKER_SECRET_MAP` in `scripts/inject-secrets.cjs`.
 
 ### Verification
 
-- **Monorepo Build & Tests**: All 31 turbo tasks passed cleanly (`pnpm turbo run test typecheck lint`).
-- **Formatting**: 100% Prettier verified (`pnpm run format:check`).
+- **Monorepo Tests**: 31/31 turbo tasks passed (`pnpm turbo run test typecheck lint`).
+- **Python Tests**: 67/67 pytest tests passed (`uv run pytest services/inference`).
+- **Formatting**: 100% Prettier compliant (`pnpm run format:check`).
