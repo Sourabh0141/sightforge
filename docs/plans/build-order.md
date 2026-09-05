@@ -110,7 +110,7 @@ When a unit cites an R-ID you do not recognise, look it up in the requirements c
 
 - [x] 24 · **Stitch design** — landing page and app shell first, then the remaining screens
 - [x] 25 · **P4 U1** — application shell, design system, state primitives, `_headers`
-- [ ] 26 · **P4 U2** — credential derivation and session handling
+- [x] 26 · **P4 U2** — credential derivation and session handling
 - [ ] 27 · **P4 U3** — the five sparse visualizations
 - [ ] 28 · **P4 U4** — the two dense visualizations + raw inspector
 - [ ] 29 · **P4 U5** — application surface: upload, configuration, live status, history

@@ -10,3 +10,4 @@ export * from "./components/BottomNav";
 export * from "./components/TopBar";
 export * from "./components/AppShell";
 export * from "./components/icons";
+export * from "./components/TurnstileWidget";
