@@ -114,7 +114,7 @@ When a unit cites an R-ID you do not recognise, look it up in the requirements c
 - [x] 27 · **P4 U3** — the five sparse visualizations
 - [x] 28 · **P4 U4** — the two dense visualizations + raw inspector
 - [x] 29 · **P4 U5** — application surface: upload, configuration, live status, history
-- [ ] 30 · **P4 U6** — public demo gallery, fed by step 19's real fixtures
+- [x] 30 · **P4 U6** — public demo gallery, fed by step 19's real fixtures
 - [ ] 31 · **P4 U7** — accessibility conformance + responsive pass
 
 **Gate: a public URL rendering real results for all seven tasks**, and a keyboard and screen-reader user completes the whole flow including reading a result.

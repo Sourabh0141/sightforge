@@ -992,6 +992,27 @@ export const BoxIcon: React.FC<IconProps> = ({
   </svg>
 );
 
+export const ChevronLeftIcon: React.FC<IconProps> = ({
+  size = 16,
+  className = "",
+  ...props
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    {...props}
+  >
+    <polyline points="15 18 9 12 15 6" />
+  </svg>
+);
+
 export const ChevronRightIcon: React.FC<IconProps> = ({
   size = 16,
   className = "",
@@ -1031,5 +1052,26 @@ export const ChevronDownIcon: React.FC<IconProps> = ({
     {...props}
   >
     <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+
+export const ChevronUpIcon: React.FC<IconProps> = ({
+  size = 16,
+  className = "",
+  ...props
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    {...props}
+  >
+    <polyline points="18 15 12 9 6 15" />
   </svg>
 );
