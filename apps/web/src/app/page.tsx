@@ -9,18 +9,40 @@ import {
 export default function HomePage() {
   const tasks = [
     {
+      slug: "detection",
       title: "Object Detection",
       desc: "Bounding boxes with class & confidence",
     },
-    { title: "Instance Segmentation", desc: "Pixel-accurate object masks" },
-    { title: "Semantic Segmentation", desc: "Dense per-pixel class maps" },
-    { title: "Classification", desc: "Ranked category probabilities" },
-    { title: "Pose Estimation", desc: "17-keypoint skeleton topology" },
     {
+      slug: "instance-segmentation",
+      title: "Instance Segmentation",
+      desc: "Pixel-accurate object masks",
+    },
+    {
+      slug: "semantic-segmentation",
+      title: "Semantic Segmentation",
+      desc: "Dense per-pixel class maps",
+    },
+    {
+      slug: "classification",
+      title: "Classification",
+      desc: "Ranked category probabilities",
+    },
+    {
+      slug: "pose",
+      title: "Pose Estimation",
+      desc: "17-keypoint skeleton topology",
+    },
+    {
+      slug: "obb",
       title: "Oriented Bounding Box",
       desc: "Rotated boxes for angled targets",
     },
-    { title: "Depth Estimation", desc: "16-bit metric monocular depth" },
+    {
+      slug: "depth",
+      title: "Depth Estimation",
+      desc: "16-bit metric monocular depth",
+    },
   ];
 
   return (
@@ -124,18 +146,19 @@ export default function HomePage() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {tasks.map((t, idx) => (
-              <div
+              <a
                 key={idx}
-                className="p-4 rounded-[8px] bg-[#12151C] border border-[#252B37] hover:border-[#22D3EE]/50 transition-colors space-y-2"
+                href={`/gallery/${t.slug}`}
+                className="group p-4 rounded-[8px] bg-[#12151C] border border-[#252B37] hover:border-[#22D3EE]/50 transition-all motion-safe:hover:-translate-y-0.5 space-y-2 block focus:outline-none focus:ring-2 focus:ring-[#22D3EE]"
               >
                 <div className="flex items-center gap-2 text-[#22D3EE]">
                   <LayersIcon size={16} />
-                  <h3 className="text-sm font-semibold text-[#E8EAED]">
+                  <h3 className="text-sm font-semibold text-[#E8EAED] group-hover:text-[#22D3EE] transition-colors">
                     {t.title}
                   </h3>
                 </div>
                 <p className="text-xs text-[#9AA3B2]">{t.desc}</p>
-              </div>
+              </a>
             ))}
           </div>
         </div>
