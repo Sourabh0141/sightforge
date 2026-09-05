@@ -1,8 +1,8 @@
 # SightForge TFLint Configuration (Plan 5, Unit 4 / R88)
 
 config {
-  module = true
-  force  = false
+  call_module_type = "local"
+  force            = false
 }
 
 plugin "terraform" {

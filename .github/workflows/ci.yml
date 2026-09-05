@@ -201,6 +201,12 @@ jobs:
       - name: Terraform Format Check
         run: terraform fmt -check -recursive infra/terraform
 
+      - name: Terraform Init (No Backend)
+        run: terraform -chdir=infra/terraform/environments/prod init -backend=false
+
+      - name: Terraform Validate
+        run: terraform -chdir=infra/terraform/environments/prod validate
+
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v4
         with:
@@ -211,12 +217,6 @@ jobs:
 
       - name: Run TFLint
         run: tflint --recursive
-
-      - name: Terraform Init (No Backend)
-        run: terraform -chdir=infra/terraform/environments/prod init -backend=false
-
-      - name: Terraform Validate
-        run: terraform -chdir=infra/terraform/environments/prod validate
 
       - name: Install Trivy
         run: |
