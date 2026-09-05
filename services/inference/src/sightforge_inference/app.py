@@ -40,6 +40,7 @@ cpu_image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install("ffmpeg")
     .pip_install(
+        "fastapi[standard]>=0.115.0",
         "pillow>=11.0.0",
         "numpy>=2.0.0",
         "requests>=2.32.0",
