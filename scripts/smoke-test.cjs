@@ -213,7 +213,12 @@ async function runSmokeTests(options = {}) {
     } else {
       const registerRes = await customFetch(`${authUrl}/auth/register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-SightForge-Request': '1',
+          'Sec-Fetch-Site': 'same-origin',
+          Origin: targetUrl || 'https://sightforge.app',
+        },
         body: JSON.stringify({
           email: testEmail,
           clientDerivedKey,
@@ -252,11 +257,14 @@ async function runSmokeTests(options = {}) {
         headers: {
           'Content-Type': 'application/json',
           'Idempotency-Key': `idemp-smoke-${runId}`,
+          'X-SightForge-Request': '1',
+          'Sec-Fetch-Site': 'same-origin',
+          Origin: targetUrl || 'https://sightforge.app',
           ...authHeader,
         },
         body: JSON.stringify({
           task: 'detection',
-          mode: 'fast',
+          mode: 'per-frame',
           mediaType: 'image',
           modelVariant: 'nano',
           confidenceThreshold: 0.5,
@@ -306,10 +314,16 @@ async function runSmokeTests(options = {}) {
     } else {
       const statusRes =
         (await customFetch(`${jobsUrl}/jobs/${jobId}/status`, {
-          headers: { ...authHeader },
+          headers: {
+            'X-SightForge-Request': '1',
+            ...authHeader,
+          },
         }).catch(() => null)) ||
         (await customFetch(`${jobsUrl}/jobs/${jobId}`, {
-          headers: { ...authHeader },
+          headers: {
+            'X-SightForge-Request': '1',
+            ...authHeader,
+          },
         }));
 
       if (!statusRes.ok) {
@@ -327,7 +341,10 @@ async function runSmokeTests(options = {}) {
       console.log('  ✅ [MOCK] Results endpoint contract validated');
     } else {
       const resultsRes = await customFetch(`${jobsUrl}/jobs/${jobId}/results`, {
-        headers: { ...authHeader },
+        headers: {
+          'X-SightForge-Request': '1',
+          ...authHeader,
+        },
       });
       // In a fresh job before completion, 200, 202, or 404 (not ready) is an expected API contract response
       const isValidStatus = [200, 202, 404].includes(resultsRes.status);
