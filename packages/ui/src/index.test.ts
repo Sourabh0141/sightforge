@@ -17,5 +17,6 @@ describe("@sightforge/ui Component Exports (P4 U1)", () => {
     expect(UI.BottomNav).toBeDefined();
     expect(UI.TopBar).toBeDefined();
     expect(UI.AppShell).toBeDefined();
+    expect(UI.TurnstileWidget).toBeDefined();
   });
 });
