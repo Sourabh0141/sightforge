@@ -33,7 +33,10 @@ export function isApiRoute(pathname: string, request: Request): boolean {
   if (pathname.startsWith("/auth")) {
     return true;
   }
-  if (pathname.startsWith("/events")) {
+  if (pathname.startsWith("/events") || pathname.startsWith("/callbacks")) {
+    return true;
+  }
+  if (pathname === "/account") {
     return true;
   }
   if (pathname.startsWith("/jobs/")) {
@@ -53,6 +56,33 @@ export function isApiRoute(pathname: string, request: Request): boolean {
     }
   }
   return false;
+}
+
+export function proxyRequest(
+  request: Request,
+  targetHost: string,
+  pathname: string,
+  search: string,
+): Promise<Response> {
+  const targetUrl = `${targetHost}${pathname}${search}`;
+  const headers = new Headers(request.headers);
+  headers.delete("host");
+  headers.delete("cf-connecting-ip");
+  headers.delete("cf-ipcountry");
+  headers.delete("cf-ray");
+  headers.delete("cf-visitor");
+
+  const reqInit: RequestInit = {
+    method: request.method,
+    headers,
+    redirect: "manual",
+  };
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    reqInit.body = request.body;
+    // @ts-expect-error duplex required for streaming body in worker fetch
+    reqInit.duplex = "half";
+  }
+  return fetch(targetUrl, reqInit);
 }
 
 export default {
@@ -92,23 +122,11 @@ export default {
             ? `https://sightforge-api-auth-prod.${subdomain}.workers.dev`
             : null);
         if (targetHost) {
-          const targetUrl = `${targetHost}${pathname}${url.search}`;
-          const headers = new Headers(request.headers);
-          const reqInit: RequestInit = {
-            method: request.method,
-            headers,
-            redirect: "manual",
-          };
-          if (request.method !== "GET" && request.method !== "HEAD") {
-            reqInit.body = request.body;
-            // @ts-expect-error duplex required for streaming body in worker fetch
-            reqInit.duplex = "half";
-          }
-          return fetch(targetUrl, reqInit);
+          return proxyRequest(request, targetHost, pathname, url.search);
         }
       }
 
-      if (pathname.startsWith("/jobs")) {
+      if (pathname.startsWith("/jobs") || pathname === "/account") {
         if (env?.JOBS_SERVICE) {
           return env.JOBS_SERVICE.fetch(request);
         }
@@ -118,23 +136,11 @@ export default {
             ? `https://sightforge-api-jobs-prod.${subdomain}.workers.dev`
             : null);
         if (targetHost) {
-          const targetUrl = `${targetHost}${pathname}${url.search}`;
-          const headers = new Headers(request.headers);
-          const reqInit: RequestInit = {
-            method: request.method,
-            headers,
-            redirect: "manual",
-          };
-          if (request.method !== "GET" && request.method !== "HEAD") {
-            reqInit.body = request.body;
-            // @ts-expect-error duplex required for streaming body in worker fetch
-            reqInit.duplex = "half";
-          }
-          return fetch(targetUrl, reqInit);
+          return proxyRequest(request, targetHost, pathname, url.search);
         }
       }
 
-      if (pathname.startsWith("/events")) {
+      if (pathname.startsWith("/events") || pathname.startsWith("/callbacks")) {
         if (env?.EVENTS_SERVICE) {
           return env.EVENTS_SERVICE.fetch(request);
         }
@@ -144,19 +150,7 @@ export default {
             ? `https://sightforge-events-prod.${subdomain}.workers.dev`
             : null);
         if (targetHost) {
-          const targetUrl = `${targetHost}${pathname}${url.search}`;
-          const headers = new Headers(request.headers);
-          const reqInit: RequestInit = {
-            method: request.method,
-            headers,
-            redirect: "manual",
-          };
-          if (request.method !== "GET" && request.method !== "HEAD") {
-            reqInit.body = request.body;
-            // @ts-expect-error duplex required for streaming body in worker fetch
-            reqInit.duplex = "half";
-          }
-          return fetch(targetUrl, reqInit);
+          return proxyRequest(request, targetHost, pathname, url.search);
         }
       }
     }

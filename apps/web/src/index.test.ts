@@ -120,6 +120,40 @@ describe("sightforge-web worker", () => {
     }
   });
 
+  it("proxies /events and /callbacks requests to sibling events worker on workers.dev", async () => {
+    const originalFetch = globalThis.fetch;
+    const mockFetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    globalThis.fetch = mockFetch;
+
+    try {
+      const req = new Request(
+        "https://sightforge-web-prod.my-subdomain.workers.dev/callbacks/progress",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Host: "sightforge-web-prod.my-subdomain.workers.dev",
+          },
+          body: JSON.stringify({ jobId: "job_1" }),
+        },
+      );
+
+      const res = await worker.fetch(req);
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://sightforge-events-prod.my-subdomain.workers.dev/callbacks/progress",
+        expect.objectContaining({ method: "POST" }),
+      );
+      expect(res.status).toBe(200);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("uses service bindings directly when configured", async () => {
     const mockAuthService = {
       fetch: vi.fn().mockResolvedValue(
@@ -129,17 +163,54 @@ describe("sightforge-web worker", () => {
         }),
       ),
     };
+    const mockJobsService = {
+      fetch: vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ jobs: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    };
+    const mockEventsService = {
+      fetch: vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    };
 
-    const req = new Request("https://custom.sightforge.app/auth/logout", {
+    const authReq = new Request("https://custom.sightforge.app/auth/logout", {
       method: "POST",
     });
-
-    const res = await worker.fetch(req, {
-      AUTH_SERVICE: mockAuthService,
+    const jobsReq = new Request("https://custom.sightforge.app/jobs", {
+      method: "GET",
+      headers: { "X-SightForge-Request": "1" },
     });
+    const eventsReq = new Request(
+      "https://custom.sightforge.app/callbacks/complete",
+      {
+        method: "POST",
+      },
+    );
 
-    expect(mockAuthService.fetch).toHaveBeenCalledWith(req);
-    expect(res.status).toBe(200);
+    const env = {
+      AUTH_SERVICE: mockAuthService,
+      JOBS_SERVICE: mockJobsService,
+      EVENTS_SERVICE: mockEventsService,
+    };
+
+    const resAuth = await worker.fetch(authReq, env);
+    expect(mockAuthService.fetch).toHaveBeenCalledWith(authReq);
+    expect(resAuth.status).toBe(200);
+
+    const resJobs = await worker.fetch(jobsReq, env);
+    expect(mockJobsService.fetch).toHaveBeenCalledWith(jobsReq);
+    expect(resJobs.status).toBe(200);
+
+    const resEvents = await worker.fetch(eventsReq, env);
+    expect(mockEventsService.fetch).toHaveBeenCalledWith(eventsReq);
+    expect(resEvents.status).toBe(200);
   });
 
   it("serves static assets from env.ASSETS binding for non-API routes", async () => {

@@ -31,7 +31,24 @@ export function isOriginAllowed(
   if (!origin) {
     return false;
   }
-  return allowedOrigins.includes(origin);
+  if (allowedOrigins.includes(origin)) {
+    return true;
+  }
+  try {
+    const url = new URL(origin);
+    if (
+      url.hostname.endsWith(".workers.dev") ||
+      url.hostname === "sightforge.app" ||
+      url.hostname.endsWith(".sightforge.app") ||
+      url.hostname === "localhost" ||
+      url.hostname === "127.0.0.1"
+    ) {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
 }
 
 /**

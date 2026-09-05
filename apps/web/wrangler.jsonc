@@ -10,6 +10,20 @@
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "single-page-application"
   },
+  "services": [
+    {
+      "binding": "AUTH_SERVICE",
+      "service": "sightforge-api-auth-prod"
+    },
+    {
+      "binding": "JOBS_SERVICE",
+      "service": "sightforge-api-jobs-prod"
+    },
+    {
+      "binding": "EVENTS_SERVICE",
+      "service": "sightforge-events-prod"
+    }
+  ],
   "vars": {
     "ENVIRONMENT": "prod"
   }
