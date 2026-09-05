@@ -1,36 +1,48 @@
-# PR: fix(web): enable run_worker_first for assets to handle POST /jobs edge routing
+# PR: fix(web): allow R2 storage in CSP connect-src and align vision mode contract
 
 ## Branch
 
-`fix/web-worker-run-first-assets`
+`fix/web-r2-csp-and-job-payload-contract`
 
 ## Title
 
-`fix(web): enable run_worker_first for assets to handle POST /jobs edge routing`
+`fix(web): allow R2 storage in CSP connect-src and align vision mode contract`
 
 ## Description
 
 ### Summary
 
-Fixes the `HTTP 405 Method Not Allowed` / `An internal server error occurred` failure when submitting image/video inference jobs from the `/new` page on Cloudflare Workers.
+Resolves two remaining upload and routing issues on production:
+
+1. Adds `https://*.r2.cloudflarestorage.com` to Content Security Policy (`connect-src`) in `apps/web/public/_headers` to unblock direct browser-to-R2 binary PUT uploads.
+2. Normalizes `task` and `mode` values (`per-frame` vs `per_frame`, `instance-segmentation` vs `instance_segmentation`) between `@sightforge/web` and `@sightforge/api-jobs` validation.
+3. Normalizes trailing slashes in `apps/web/src/index.ts` and `apps/api-jobs/src/index.ts` so `GET /jobs/` cleanly renders the UI page rather than failing on the API router.
 
 ### Root Cause Analysis
 
-- Cloudflare Workers with Static Assets (`assets: { directory: "./out", binding: "ASSETS" }`) defaults to evaluating static asset matches _before_ executing the worker entrypoint script (`run_worker_first = false`).
-- In Next.js static HTML export (`output: 'export'`), the route `/jobs` generates a static prerendered HTML file at `./out/jobs.html` (or `./out/jobs/index.html`).
-- When the frontend client on `/new` calls `POST /jobs` to register a new inference job and request a presigned R2 upload URL, Cloudflare's static asset router matches the `/jobs` path to the static HTML file.
-- Because Cloudflare's static asset router only accepts `GET` and `HEAD` methods, it immediately rejects the `POST /jobs` request at the edge with `HTTP 405 Method Not Allowed` before invoking `apps/web/src/index.ts`.
+1. **R2 Binary Upload Blocked by CSP**:
+   - When a job is created, the backend provides an S3 SigV4 presigned upload URL hosted on `https://<account_id>.r2.cloudflarestorage.com`.
+   - The browser's Content Security Policy in `_headers` defined `connect-src` without `https://*.r2.cloudflarestorage.com`.
+   - Direct binary PUT requests to R2 were rejected by the browser's CSP engine with: `Refused to connect because it violates the document's Content Security Policy`.
 
-### Solution
+2. **Job Creation Validation 400**:
+   - The frontend was sending `mode: "per_frame"` (with underscore), whereas `@sightforge/db` and `@sightforge/api-jobs` schema enforce `PROCESSING_MODES = ["per-frame", "tracking"]` (with hyphen).
+   - This caused `POST /jobs` to throw `HTTP 400 invalid-input: Invalid processing mode`.
 
-- Set `"run_worker_first": true` in `apps/web/wrangler.jsonc` under `assets`.
-- With `run_worker_first: true`, Cloudflare Workers always invokes `apps/web/src/index.ts` first.
-- The worker's `isApiRoute` logic identifies `POST /jobs` as an API request and routes it to `env.JOBS_SERVICE.fetch(request)` (in-memory Service Binding) or reverse-proxies to `sightforge-api-jobs-prod.*.workers.dev`.
-- Non-API routes fall through cleanly to `env.ASSETS.fetch(request)` to serve static Next.js assets.
+3. **Trailing Slash Page Routing**:
+   - When navigating to `/jobs/` with a trailing slash, `isApiRoute` matched `pathname.startsWith("/jobs/")` and proxied the request to `JOBS_SERVICE` instead of `ASSETS`.
+
+### What Changed
+
+- **`apps/web/public/_headers`**: Added `https://*.r2.cloudflarestorage.com` to `connect-src`.
+- **`apps/web/src/lib/upload-manager.ts`**: Normalized `task` and `mode` to hyphenated strings before issuing `POST /jobs`.
+- **`apps/api-jobs/src/validation.ts`**: Added underscore-to-hyphen normalization to tolerate client variations.
+- **`apps/web/src/index.ts`**: Normalized trailing slashes in `isApiRoute` so `/jobs/` page navigation falls through to `env.ASSETS`.
+- **`apps/api-jobs/src/index.ts`**: Normalized path parameter trailing slash.
+- **Test Suites**: Updated unit tests across `web` and `api-jobs` to verify CSP directives and mode formatting.
 
 ### Verification
 
-- Ran full monorepo test suite, TypeScript typecheck, and linter: 31/31 tasks passed.
-- Verified Next.js static build (`pnpm --filter sightforge-web build`) succeeds cleanly.
-- Verified Prettier code formatting compliance (`pnpm run format:check`).
-- Live production testing with Playwright MCP confirmed the exact `405 Method Not Allowed` on `POST /jobs`.
+- **Monorepo Tests**: 31/31 tasks passed (`pnpm turbo run test typecheck lint`).
+- **Formatting**: 100% Prettier compliant (`pnpm run format:check`).
+- **Live Playwright Inspection**: Confirmed `POST /jobs` returns `HTTP 201 Created` with valid presigned R2 upload URL and identified the exact CSP violation for `*.r2.cloudflarestorage.com`.

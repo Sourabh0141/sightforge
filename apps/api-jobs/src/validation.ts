@@ -95,26 +95,34 @@ export function validateCreateJobInput(
   }
 
   const raw = input as Partial<CreateJobInput>;
+  const rawTask =
+    typeof raw.task === "string"
+      ? (raw.task.replace(/_/g, "-") as VisionTask)
+      : raw.task;
+  const rawMode =
+    typeof raw.mode === "string"
+      ? (raw.mode.replace(/_/g, "-") as ProcessingMode)
+      : raw.mode;
 
   // 1. Task Validation
-  if (!raw.task || !VISION_TASKS.includes(raw.task as VisionTask)) {
+  if (!rawTask || !VISION_TASKS.includes(rawTask as VisionTask)) {
     throw new HttpError(
       400,
       "invalid-input",
       `Invalid vision task. Must be one of: ${VISION_TASKS.join(", ")}.`,
     );
   }
-  const task = raw.task as VisionTask;
+  const task = rawTask as VisionTask;
 
   // 2. Mode Validation
-  if (!raw.mode || !PROCESSING_MODES.includes(raw.mode as ProcessingMode)) {
+  if (!rawMode || !PROCESSING_MODES.includes(rawMode as ProcessingMode)) {
     throw new HttpError(
       400,
       "invalid-input",
       `Invalid processing mode. Must be one of: ${PROCESSING_MODES.join(", ")}.`,
     );
   }
-  const mode = raw.mode as ProcessingMode;
+  const mode = rawMode as ProcessingMode;
 
   // 3. Task-Mode Compatibility Check (R42, R43, AE4)
   if (mode === "tracking" && !TRACKING_ELIGIBLE_TASKS.includes(task)) {

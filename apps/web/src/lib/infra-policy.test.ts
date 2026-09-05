@@ -99,5 +99,7 @@ variable "api_secret" {
     // Ensure Cloudflare workers.dev domains are allowed for API & WebSocket streaming
     expect(content).toContain("https://*.workers.dev");
     expect(content).toContain("wss://*.workers.dev");
+    // Ensure Cloudflare R2 storage domain is allowed for direct browser binary uploads
+    expect(content).toContain("https://*.r2.cloudflarestorage.com");
   });
 });

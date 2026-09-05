@@ -84,7 +84,7 @@ describe("Direct R2 Upload Manager (R18, R19, R54)", () => {
       expect.objectContaining({
         task: "detection",
         modelVariant: "nano",
-        mode: "per_frame",
+        mode: "per-frame",
         mediaType: "image",
         originalFilename: "test.png",
       }),

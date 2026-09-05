@@ -39,6 +39,15 @@ describe("sightforge-web worker", () => {
     });
     expect(isApiRoute("/jobs", jobPageReq)).toBe(false);
 
+    // Jobs GET browser page navigation with trailing slash is NOT API (serves SPA)
+    const jobTrailingSlashPageReq = new Request(
+      "https://site.workers.dev/jobs/",
+      {
+        headers: { accept: "text/html" },
+      },
+    );
+    expect(isApiRoute("/jobs/", jobTrailingSlashPageReq)).toBe(false);
+
     // Gallery or landing page is NOT API
     const galleryReq = new Request("https://site.workers.dev/gallery");
     expect(isApiRoute("/gallery", galleryReq)).toBe(false);

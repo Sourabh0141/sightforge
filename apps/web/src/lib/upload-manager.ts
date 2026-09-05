@@ -65,15 +65,18 @@ export function uploadMediaJob(
       stage: "allocating",
     });
 
+    const normalizedTask = (config.task as string).replace(/_/g, "-");
+    const normalizedMode = (
+      config.mode || (config.mediaType === "video" ? "per-frame" : "per-frame")
+    ).replace(/_/g, "-");
+
     const idempotencyKey = crypto.randomUUID();
     const jobCreation = await api.post<CreateJobResponse>(
       "/jobs",
       {
-        task: config.task,
+        task: normalizedTask as TaskType,
         modelVariant: config.modelVariant || "nano",
-        mode:
-          config.mode ||
-          (config.mediaType === "video" ? "per_frame" : "per_frame"),
+        mode: normalizedMode as InferenceMode,
         mediaType: config.mediaType,
         originalFilename: config.originalFilename || file.name,
         confidenceThreshold: config.confidenceThreshold ?? 0.25,

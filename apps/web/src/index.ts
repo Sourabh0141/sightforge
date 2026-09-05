@@ -39,10 +39,13 @@ export function isApiRoute(pathname: string, request: Request): boolean {
   if (pathname === "/account") {
     return true;
   }
-  if (pathname.startsWith("/jobs/")) {
-    return true;
-  }
-  if (pathname === "/jobs") {
+
+  const normalizedPath =
+    pathname.length > 1 && pathname.endsWith("/")
+      ? pathname.slice(0, -1)
+      : pathname;
+
+  if (normalizedPath === "/jobs") {
     // Non-GET requests (e.g. POST /jobs) are API calls
     if (request.method !== "GET" && request.method !== "HEAD") {
       return true;
@@ -54,7 +57,13 @@ export function isApiRoute(pathname: string, request: Request): boolean {
     ) {
       return true;
     }
+    return false;
   }
+
+  if (normalizedPath.startsWith("/jobs/")) {
+    return true;
+  }
+
   return false;
 }
 
