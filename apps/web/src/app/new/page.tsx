@@ -1,48 +1,159 @@
+/**
+ * SightForge New Job Analysis Page (P4 U5, R54, R60, R16-R24)
+ *
+ * Hosts the media drag-and-drop dropzone, dynamic task configuration panel,
+ * client pre-validation, direct R2 upload execution, and redirection to live tracker.
+ */
+
 "use client";
 
-import React from "react";
-import { AppShell, Card, Button, UploadCloudIcon } from "@sightforge/ui";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { AppShell, ErrorBanner } from "@sightforge/ui";
+import { MediaDropzone } from "../../components/MediaDropzone";
+import {
+  TaskConfigPanel,
+  type TaskConfigValues,
+} from "../../components/TaskConfigPanel";
+import {
+  uploadMediaJob,
+  type UploadProgress,
+  type UploadHandle,
+} from "../../lib/upload-manager";
+import type { MediaProbeMetadata } from "../../lib/media-validation";
 
 export default function NewJobPage() {
+  const router = useRouter();
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [mediaMetadata, setMediaMetadata] = useState<MediaProbeMetadata | null>(
+    null,
+  );
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(
+    null,
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [activeUploadHandle, setActiveUploadHandle] =
+    useState<UploadHandle | null>(null);
+
+  const [configValues, setConfigValues] = useState<TaskConfigValues>({
+    task: "detection",
+    modelVariant: "nano",
+    mode: "per_frame",
+    confidenceThreshold: 0.25,
+    sampledFps: 5,
+  });
+
+  const isVideo = mediaMetadata?.mediaType === "video";
+
+  const handleMediaSelected = (file: File, meta: MediaProbeMetadata) => {
+    setSelectedFile(file);
+    setMediaMetadata(meta);
+    setErrorMessage(null);
+
+    // Default mode adjustment for video vs image
+    if (meta.mediaType === "video") {
+      setConfigValues((prev) => ({
+        ...prev,
+        mode: prev.mode || "per_frame",
+      }));
+    } else {
+      setConfigValues((prev) => ({
+        ...prev,
+        mode: "per_frame",
+      }));
+    }
+  };
+
+  const handleMediaCleared = () => {
+    setSelectedFile(null);
+    setMediaMetadata(null);
+    setUploadProgress(null);
+    setErrorMessage(null);
+    if (activeUploadHandle) {
+      activeUploadHandle.abort();
+      setActiveUploadHandle(null);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedFile || !mediaMetadata || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      const handle = uploadMediaJob(
+        selectedFile,
+        {
+          task: configValues.task,
+          modelVariant: configValues.modelVariant,
+          mode: isVideo ? configValues.mode : "per_frame",
+          mediaType: mediaMetadata.mediaType,
+          originalFilename: selectedFile.name,
+          confidenceThreshold: configValues.confidenceThreshold,
+          sampledFps: isVideo ? configValues.sampledFps : undefined,
+        },
+        (progress) => {
+          setUploadProgress(progress);
+        },
+      );
+
+      setActiveUploadHandle(handle);
+      const createdJob = await handle.promise;
+
+      // Navigate to live status page upon successful upload and registration
+      router.push(`/jobs?id=${createdJob.jobId}`);
+    } catch (err) {
+      setIsSubmitting(false);
+      setUploadProgress(null);
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : "Failed to upload media and initiate inference job.",
+      );
+    }
+  };
+
   return (
     <AppShell
       currentPath="/new"
       topBarProps={{
         title: "New Job",
-        subtitle: "Configure media and analysis task",
+        subtitle: "Configure media and computer vision analysis",
       }}
     >
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Media dropzone preview */}
-        <div className="lg:col-span-7">
-          <Card className="h-[420px] flex flex-col items-center justify-center border-dashed border-2 border-[#252B37] hover:border-[#22D3EE]/50 transition-colors text-center p-8">
-            <UploadCloudIcon size={48} className="text-[#9AA3B2] mb-4" />
-            <h3 className="text-base font-semibold text-[#E8EAED] mb-1">
-              Drop an image or video here
-            </h3>
-            <p className="text-xs text-[#9AA3B2] mb-4">
-              or click to browse files
-            </p>
-            <span className="text-[11px] font-mono text-[#6B7280]">
-              JPEG, PNG, WebP up to 10 MB · MP4 up to 50 MB and 30 seconds
-            </span>
-          </Card>
-        </div>
+      <div className="max-w-6xl mx-auto space-y-6">
+        {errorMessage && (
+          <ErrorBanner
+            message={errorMessage}
+            onDismiss={() => setErrorMessage(null)}
+          />
+        )}
 
-        {/* Configuration panel */}
-        <div className="lg:col-span-5 space-y-6">
-          <Card className="space-y-4">
-            <h2 className="text-sm font-semibold text-[#E8EAED] pb-2 border-b border-[#252B37]">
-              Task Configuration
-            </h2>
-            <p className="text-xs text-[#9AA3B2]">
-              Select vision task and configure model size, inference mode, and
-              confidence threshold.
-            </p>
-            <Button variant="primary" className="w-full justify-center">
-              Run analysis
-            </Button>
-          </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Column: Media Dropzone & Preview (60% width on desktop) */}
+          <div className="lg:col-span-7 space-y-4">
+            <MediaDropzone
+              onMediaSelected={handleMediaSelected}
+              onMediaCleared={handleMediaCleared}
+              uploadProgress={uploadProgress}
+              disabled={isSubmitting}
+            />
+          </div>
+
+          {/* Right Column: Task Configuration Panel (40% width on desktop) */}
+          <div className="lg:col-span-5 space-y-6">
+            <TaskConfigPanel
+              values={configValues}
+              onChange={setConfigValues}
+              isVideo={isVideo}
+              canSubmit={!!selectedFile && !!mediaMetadata}
+              isSubmitting={isSubmitting}
+              onSubmit={handleSubmit}
+            />
+          </div>
         </div>
       </div>
     </AppShell>
