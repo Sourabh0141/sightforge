@@ -78,11 +78,9 @@ export default function HomePage() {
           >
             Sign in
           </a>
-          <a href="/signup">
-            <Button size="sm" variant="primary">
-              Get started
-            </Button>
-          </a>
+          <Button href="/signup" size="sm" variant="primary">
+            Get started
+          </Button>
         </div>
       </header>
 
@@ -102,20 +100,17 @@ export default function HomePage() {
               results on canvas or as JSON.
             </p>
             <div className="flex flex-wrap items-center gap-4 pt-2">
-              <a href="/gallery">
-                <Button
-                  size="lg"
-                  variant="primary"
-                  rightIcon={<ArrowRightIcon size={16} />}
-                >
-                  See it working
-                </Button>
-              </a>
-              <a href="/signup">
-                <Button size="lg" variant="secondary">
-                  Create an account
-                </Button>
-              </a>
+              <Button
+                href="/gallery"
+                size="lg"
+                variant="primary"
+                rightIcon={<ArrowRightIcon size={16} />}
+              >
+                See it working
+              </Button>
+              <Button href="/signup" size="lg" variant="secondary">
+                Create an account
+              </Button>
             </div>
           </div>
 

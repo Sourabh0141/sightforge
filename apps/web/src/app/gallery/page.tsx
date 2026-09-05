@@ -36,11 +36,9 @@ export default function GalleryIndexPage() {
           >
             Sign in
           </a>
-          <a href="/signup">
-            <Button size="sm" variant="primary">
-              Create account
-            </Button>
-          </a>
+          <Button href="/signup" size="sm" variant="primary">
+            Create account
+          </Button>
         </div>
       </header>
 
@@ -122,24 +120,23 @@ export default function GalleryIndexPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
-          <a href="/signup">
-            <Button
-              variant="primary"
-              size="md"
-              rightIcon={<ArrowRightIcon size={16} />}
-            >
-              Create your account
-            </Button>
-          </a>
-          <a
+          <Button
+            href="/signup"
+            variant="primary"
+            size="md"
+            rightIcon={<ArrowRightIcon size={16} />}
+          >
+            Create your account
+          </Button>
+          <Button
             href="https://github.com/Sourabh0141/sightforge"
             target="_blank"
             rel="noopener noreferrer"
+            variant="secondary"
+            size="md"
           >
-            <Button variant="secondary" size="md">
-              Read the source
-            </Button>
-          </a>
+            Read the source
+          </Button>
         </div>
       </footer>
     </div>

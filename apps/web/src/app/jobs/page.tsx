@@ -357,11 +357,9 @@ function JobsHistoryDashboard() {
             {jobs.length === 1 ? "analysis" : "analyses"} recorded
           </p>
         </div>
-        <a href="/new">
-          <Button variant="primary" size="sm">
-            New job
-          </Button>
-        </a>
+        <Button href="/new" variant="primary" size="sm">
+          New job
+        </Button>
       </div>
 
       {/* Filter Bar */}

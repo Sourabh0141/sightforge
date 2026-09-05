@@ -11,6 +11,9 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  href?: string;
+  target?: string;
+  rel?: string;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -24,6 +27,9 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       children,
       leftIcon,
       rightIcon,
+      href,
+      target,
+      rel,
       ...props
     },
     ref,
@@ -49,13 +55,37 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       link: "bg-transparent text-[#22D3EE] hover:underline p-0 h-auto font-normal",
     };
 
+    const classes = twMerge(
+      clsx(baseStyles, sizeStyles[size], variantStyles[variant], className),
+    );
+
+    if (href) {
+      return (
+        <a
+          href={href}
+          target={target}
+          rel={rel}
+          className={classes}
+          aria-disabled={disabled || isLoading ? true : undefined}
+          tabIndex={disabled || isLoading ? -1 : undefined}
+          {...(props as any)}
+        >
+          {isLoading ? (
+            <LoaderIcon className="h-4 w-4 animate-spin shrink-0" />
+          ) : (
+            leftIcon
+          )}
+          <span>{children}</span>
+          {!isLoading && rightIcon}
+        </a>
+      );
+    }
+
     return (
       <button
         ref={ref}
         disabled={disabled || isLoading}
-        className={twMerge(
-          clsx(baseStyles, sizeStyles[size], variantStyles[variant], className),
-        )}
+        className={classes}
         {...props}
       >
         {isLoading ? (
