@@ -18,5 +18,10 @@ describe("@sightforge/ui Component Exports (P4 U1)", () => {
     expect(UI.TopBar).toBeDefined();
     expect(UI.AppShell).toBeDefined();
     expect(UI.TurnstileWidget).toBeDefined();
+    expect(UI.ViewerShell).toBeDefined();
+    expect(UI.CanvasOverlay).toBeDefined();
+    expect(UI.ClassificationViewer).toBeDefined();
+    expect(UI.ResultDataTable).toBeDefined();
+    expect(UI.VideoScrubber).toBeDefined();
   });
 });
