@@ -124,7 +124,7 @@ When a unit cites an R-ID you do not recognise, look it up in the requirements c
 ## P5 — Delivery & Operations
 
 - [x] 32 · **P5 U4** — Terraform checks and plan publication on pull requests
-- [ ] 33 · **P5 U5** — deployment workflow and the approval gate
+- [x] 33 · **P5 U5** — deployment workflow and the approval gate
 - [ ] 34 · **P5 U6** — observability and alerting
 - [ ] 35 · **P5 U7** — rollback drill, architecture document, clean-clone check
 
