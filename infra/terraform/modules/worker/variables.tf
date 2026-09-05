@@ -19,9 +19,3 @@ variable "compatibility_flags" {
   type        = list(string)
   default     = ["nodejs_compat"]
 }
-
-variable "tags" {
-  description = "Tags to assign to the Worker script"
-  type        = list(string)
-  default     = []
-}
