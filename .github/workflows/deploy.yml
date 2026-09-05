@@ -114,7 +114,7 @@ jobs:
           pnpm --filter sightforge-web exec wrangler deploy
 
           echo "Deploying Modal Inference App with commit tag ${{ github.sha }}..."
-          uv run modal deploy services/inference/src/sightforge_inference/endpoint.py --name sightforge-inference
+          uv run --package sightforge-inference modal deploy -m sightforge_inference.endpoint --name sightforge-inference
 
       # ─── STEP 7: POST-DEPLOYMENT SMOKE TEST (R91) ─────────────────────────
       - name: Step 7 - Execute Post-Deployment Smoke Test Suite
