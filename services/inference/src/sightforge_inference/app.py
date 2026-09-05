@@ -30,8 +30,6 @@ VOLUME_MOUNTS = {
 inference_secrets = modal.Secret.from_name(
     "sightforge-inference-secrets",
     required_keys=[
-        "MODAL_KEY",
-        "MODAL_SECRET",
         "MODAL_CALLBACK_SECRET",
     ],
 )
