@@ -1,7 +1,11 @@
 /**
  * sightforge-web Worker entrypoint (Static asset delivery & SPA fallback)
  */
-import type { WebWorkerEnv } from "@sightforge/worker-kit";
+export interface WebWorkerEnv {
+  ASSETS?: {
+    fetch(request: Request | string): Promise<Response>;
+  };
+}
 
 export default {
   async fetch(request: Request, env?: WebWorkerEnv): Promise<Response> {

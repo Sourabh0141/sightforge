@@ -7,6 +7,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+*.tsbuildinfo
 
 # Next.js
 .next/
@@ -54,3 +55,10 @@ Thumbs.db
 !.vscode/settings.json
 !.vscode/extensions.json
 .idea/
+
+# Design reference assets
+docs/html/
+
+# Temporary PR descriptions
+PR_*.md
+

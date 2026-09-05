@@ -4,16 +4,30 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "echo \"sightforge-web lint ok\"",
-    "test": "vitest run",
-    "build": "echo \"sightforge-web build ok\""
+    "test": "vitest run"
   },
   "dependencies": {
-    "@sightforge/worker-kit": "workspace:*"
+    "@sightforge/contracts": "workspace:*",
+    "@sightforge/ui": "workspace:*",
+    "clsx": "^2.1.1",
+    "next": "15.1.7",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250224.0",
+    "@types/node": "22.13.4",
+    "@types/react": "19.0.8",
+    "@types/react-dom": "19.0.3",
+    "autoprefixer": "10.4.20",
+    "postcss": "8.5.2",
+    "tailwindcss": "3.4.17",
     "typescript": "^5.7.3",
     "vitest": "^4.1.11"
   }
