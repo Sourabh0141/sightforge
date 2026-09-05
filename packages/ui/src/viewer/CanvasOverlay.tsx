@@ -1,7 +1,13 @@
 "use client";
 
 /**
- * SightForge UI - Interactive Canvas Overlay Component (R55, R56, R62, R63, R64, R65, KTD3)
+ * SightForge UI - Interactive Canvas Overlay Component (R55, R56, R58, R62, R63, R64, R65, KTD3, KTD4)
+ *
+ * Coordinates:
+ * - Sparse vector renderers (Detection, OBB, Pose, Instance Seg, Tracking).
+ * - Dense continuous raster overlays (Semantic Segmentation, Depth Estimation).
+ * - Artifact image loading, caching, and resolution mapping.
+ * - Interactive cursor depth probe & roving focus accessibility.
  */
 
 import React, {
@@ -11,7 +17,16 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import type { NormalizedRegion, ViewerDisplayOptions } from "./types";
+import type {
+  NormalizedRegion,
+  ViewerDisplayOptions,
+  ArtifactResolver,
+  AllTaskType,
+} from "./types";
+import type {
+  SemanticSegmentationColorMapping,
+  DepthMetadata,
+} from "@sightforge/contracts";
 import { createHatchPatternCanvas, sanitizeText } from "./palette";
 import {
   renderDetectionInstance,
@@ -19,15 +34,25 @@ import {
   renderPoseInstance,
   renderInstanceSegmentation,
   renderTrackingTrajectory,
+  drawSemanticSegmentationOverlay,
+  drawDepthOverlay,
 } from "./renderers";
 
 export interface CanvasOverlayProps {
-  regions: NormalizedRegion[];
+  task?: AllTaskType;
+  regions?: NormalizedRegion[];
   currentFrameIndex?: number;
   sourceWidth?: number;
   sourceHeight?: number;
   mediaUrl?: string;
   mediaType?: "image" | "video";
+  // Dense artifact & metadata props (R50, R55, KTD4)
+  artifactKey?: string;
+  resolveArtifact?: ArtifactResolver;
+  semanticPalette?: SemanticSegmentationColorMapping[];
+  depthMetadata?: DepthMetadata;
+  accessibleDescription?: string;
+  // Options & callbacks
   options: ViewerDisplayOptions;
   onRegionSelect?: (region: NormalizedRegion | null) => void;
   onRegionHover?: (region: NormalizedRegion | null) => void;
@@ -35,12 +60,18 @@ export interface CanvasOverlayProps {
 }
 
 export function CanvasOverlay({
-  regions,
+  task = "detection",
+  regions = [],
   currentFrameIndex = 0,
   sourceWidth = 1920,
   sourceHeight = 1080,
   mediaUrl,
   mediaType = "image",
+  artifactKey,
+  resolveArtifact,
+  semanticPalette = [],
+  depthMetadata,
+  accessibleDescription,
   options,
   onRegionSelect,
   onRegionHover,
@@ -52,6 +83,16 @@ export function CanvasOverlay({
   const rafIdRef = useRef<number | null>(null);
   const patternCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  // Cached decoded artifact image for dense tasks
+  const [artifactImage, setArtifactImage] = useState<HTMLImageElement | null>(
+    null,
+  );
+  const [artifactError, setArtifactError] = useState<string | null>(null);
+  const [probeCoords, setProbeCoords] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+
   const [containerSize, setContainerSize] = useState<{
     width: number;
     height: number;
@@ -60,12 +101,57 @@ export function CanvasOverlay({
     height: 450,
   });
 
-  // Initialize hatch pattern once
+  const [focusedIndex, setFocusedIndex] = useState<number>(-1);
+
+  // Load and decode dense artifact when artifactKey or currentFrameIndex changes (R50, R58)
+  useEffect(() => {
+    if (!artifactKey) {
+      setArtifactImage(null);
+      setArtifactError(null);
+      return;
+    }
+
+    let isCancelled = false;
+    setArtifactError(null);
+
+    const loadArtifact = async () => {
+      try {
+        let url = artifactKey;
+        if (resolveArtifact) {
+          url = await resolveArtifact(artifactKey, currentFrameIndex);
+        }
+
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = url;
+
+        await img.decode();
+        if (!isCancelled) {
+          setArtifactImage(img);
+        }
+      } catch (err: any) {
+        if (!isCancelled) {
+          console.warn("Failed to load dense artifact:", err);
+          setArtifactError(
+            "Dense artifact image is unavailable or retention window expired.",
+          );
+        }
+      }
+    };
+
+    loadArtifact();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [artifactKey, currentFrameIndex, resolveArtifact]);
+
+  // Create hatch pattern canvas once
   useEffect(() => {
     patternCanvasRef.current = createHatchPatternCanvas();
   }, []);
 
-  // Filter visible regions based on confidence & class filter
+  // Filter regions by confidence & class
   const visibleRegions = useMemo(() => {
     return regions.filter((r) => {
       if (r.confidence < options.minConfidence) return false;
@@ -79,24 +165,16 @@ export function CanvasOverlay({
     });
   }, [regions, options.minConfidence, options.selectedClassIds]);
 
-  // Active region index for roving focus in reading order (top-to-bottom, left-to-right)
-  const sortedRegionsForA11y = useMemo(() => {
+  // Sort regions in spatial reading order (top-to-bottom, left-to-right) for a11y (R62)
+  const accessibleRegions = useMemo(() => {
     return [...visibleRegions].sort((a, b) => {
-      const [ax, ay] = a.box;
-      const [bx, by] = b.box;
-      if (Math.abs(ay - by) > 20) return ay - by;
-      return ax - bx;
+      const topDiff = a.box[1] - b.box[1];
+      if (Math.abs(topDiff) > 20) return topDiff;
+      return a.box[0] - b.box[0];
     });
   }, [visibleRegions]);
 
-  const activeIndex = useMemo(() => {
-    if (!options.activeRegionId) return -1;
-    return sortedRegionsForA11y.findIndex(
-      (r) => r.id === options.activeRegionId,
-    );
-  }, [options.activeRegionId, sortedRegionsForA11y]);
-
-  // Resize observer to track container dimensions
+  // Resize observer to keep canvas DPI scaled to container
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -114,46 +192,18 @@ export function CanvasOverlay({
     return () => observer.disconnect();
   }, []);
 
-  // Calculate image placement scale to fit container while preserving aspect ratio
-  const renderMetrics = useMemo(() => {
-    const srcAspect = sourceWidth / (sourceHeight || 1);
-    const contAspect = containerSize.width / (containerSize.height || 1);
-
-    let drawWidth = containerSize.width;
-    let drawHeight = containerSize.height;
-    let offsetX = 0;
-    let offsetY = 0;
-
-    if (contAspect > srcAspect) {
-      // Container is wider than image: fit height
-      drawHeight = containerSize.height;
-      drawWidth = drawHeight * srcAspect;
-      offsetX = (containerSize.width - drawWidth) / 2;
-    } else {
-      // Container is taller than image: fit width
-      drawWidth = containerSize.width;
-      drawHeight = drawWidth / srcAspect;
-      offsetY = (containerSize.height - drawHeight) / 2;
-    }
-
-    const scaleX = drawWidth / sourceWidth;
-    const scaleY = drawHeight / sourceHeight;
-
-    return { drawWidth, drawHeight, offsetX, offsetY, scaleX, scaleY };
-  }, [containerSize, sourceWidth, sourceHeight]);
-
-  // Draw overlay canvas
-  const draw = useCallback(() => {
+  // Main Render Loop coalesced via requestAnimationFrame
+  const renderCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const dpr =
-      typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+    const dpr = window.devicePixelRatio || 1;
     const { width, height } = containerSize;
 
-    // Set backing store dimensions
+    // Adjust canvas buffer size for high-DPI displays
     if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
       canvas.width = width * dpr;
       canvas.height = height * dpr;
@@ -163,254 +213,341 @@ export function CanvasOverlay({
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, height);
 
-    if (!options.showOverlays) {
-      ctx.restore();
-      return;
-    }
+    const transform = { zoom: 1.0, panX: 0, panY: 0 };
+    const pattern = patternCanvasRef.current;
 
-    const { offsetX, offsetY, scaleX, scaleY } = renderMetrics;
-
-    // Apply viewport translation and scale
-    ctx.save();
-    ctx.translate(offsetX, offsetY);
-    ctx.scale(scaleX, scaleY);
-
-    const hasActiveOrHover = Boolean(
-      options.activeRegionId || options.hoveredRegionId,
-    );
-
-    // 1. Draw tracking trajectories first (behind boxes)
-    for (const region of visibleRegions) {
-      const isSelected = region.id === options.activeRegionId;
-      const isHovered = region.id === options.hoveredRegionId;
-      const isDimmed = hasActiveOrHover && !isSelected && !isHovered;
-
-      renderTrackingTrajectory(
+    // =======================================================================
+    // 1. DENSE TASK OVERLAYS (Semantic Segmentation & Depth)
+    // =======================================================================
+    if (task === "semantic-segmentation" && artifactImage) {
+      drawSemanticSegmentationOverlay({
         ctx,
-        region,
-        currentFrameIndex,
+        maskImage: artifactImage,
+        colorPalette: semanticPalette,
+        imgWidth: sourceWidth,
+        imgHeight: sourceHeight,
+        canvasWidth: width,
+        canvasHeight: height,
         options,
-        isSelected,
-        isHovered,
-        isDimmed,
-      );
+        transform,
+      });
+    } else if (task === "depth" && depthMetadata) {
+      drawDepthOverlay({
+        ctx,
+        depthImage: artifactImage,
+        metadata: depthMetadata,
+        imgWidth: sourceWidth,
+        imgHeight: sourceHeight,
+        canvasWidth: width,
+        canvasHeight: height,
+        options,
+        transform,
+        probeCoords,
+      });
     }
 
-    // 2. Draw task-specific regions
-    for (const region of visibleRegions) {
-      const isSelected = region.id === options.activeRegionId;
-      const isHovered = region.id === options.hoveredRegionId;
-      const isDimmed = hasActiveOrHover && !isSelected && !isHovered;
+    // =======================================================================
+    // 2. SPARSE VECTOR OVERLAYS (Detection, OBB, Pose, Instance Seg, Tracking)
+    // =======================================================================
+    if (options.showOverlays && visibleRegions.length > 0) {
+      // Pass 1: Render tracking trajectory polylines behind bounding boxes
+      if (options.showTracks) {
+        for (const reg of visibleRegions) {
+          if (reg.trajectory && reg.trajectory.length > 1) {
+            const isSelected = options.activeRegionId === reg.id;
+            const isHovered = options.hoveredRegionId === reg.id;
+            const isDimmed =
+              Boolean(
+                options.activeRegionId && options.activeRegionId !== reg.id,
+              ) ||
+              Boolean(
+                options.selectedTrackId !== null &&
+                reg.trackId !== undefined &&
+                options.selectedTrackId !== reg.trackId,
+              );
 
-      switch (region.task) {
-        case "detection":
+            renderTrackingTrajectory(
+              ctx,
+              reg,
+              currentFrameIndex,
+              options,
+              isSelected,
+              isHovered,
+              isDimmed,
+            );
+          }
+        }
+      }
+
+      // Pass 2: Render foreground region instances
+      for (const reg of visibleRegions) {
+        const isSelected = options.activeRegionId === reg.id;
+        const isHovered = options.hoveredRegionId === reg.id;
+        const isDimmed =
+          Boolean(
+            options.activeRegionId && options.activeRegionId !== reg.id,
+          ) ||
+          Boolean(
+            options.selectedTrackId !== null &&
+            reg.trackId !== undefined &&
+            options.selectedTrackId !== reg.trackId,
+          );
+
+        if (reg.task === "detection") {
           renderDetectionInstance(
             ctx,
-            region,
+            reg,
             options,
             isSelected,
             isHovered,
             isDimmed,
           );
-          break;
-        case "obb":
-          renderObbInstance(
-            ctx,
-            region,
-            options,
-            isSelected,
-            isHovered,
-            isDimmed,
-          );
-          break;
-        case "pose":
+        } else if (reg.task === "obb") {
+          renderObbInstance(ctx, reg, options, isSelected, isHovered, isDimmed);
+        } else if (reg.task === "pose") {
           renderPoseInstance(
             ctx,
-            region,
+            reg,
             options,
             isSelected,
             isHovered,
             isDimmed,
           );
-          break;
-        case "instance-segmentation":
+        } else if (reg.task === "instance-segmentation") {
           renderInstanceSegmentation(
             ctx,
-            region,
+            reg,
             options,
-            patternCanvasRef.current,
+            pattern,
             isSelected,
             isHovered,
             isDimmed,
           );
-          break;
-        default:
-          renderDetectionInstance(
-            ctx,
-            region,
-            options,
-            isSelected,
-            isHovered,
-            isDimmed,
-          );
-          break;
+        }
       }
     }
 
     ctx.restore();
-    ctx.restore();
   }, [
     containerSize,
-    options,
-    renderMetrics,
+    task,
+    artifactImage,
+    semanticPalette,
+    depthMetadata,
+    probeCoords,
     visibleRegions,
+    options,
+    sourceWidth,
+    sourceHeight,
     currentFrameIndex,
   ]);
 
-  // Request Animation Frame render scheduler
+  // Request Animation Frame coalescing
   useEffect(() => {
     if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
-    rafIdRef.current = requestAnimationFrame(() => {
-      draw();
-    });
+    rafIdRef.current = requestAnimationFrame(renderCanvas);
     return () => {
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
     };
-  }, [draw]);
+  }, [renderCanvas]);
 
-  // Pointer Hit-Testing
-  const getRegionAtPoint = useCallback(
-    (clientX: number, clientY: number): NormalizedRegion | null => {
-      const canvas = canvasRef.current;
-      if (!canvas) return null;
-      const rect = canvas.getBoundingClientRect();
-      const clickX = clientX - rect.left;
-      const clickY = clientY - rect.top;
-
-      const { offsetX, offsetY, scaleX, scaleY } = renderMetrics;
-      // Convert to image coordinates
-      const imgX = (clickX - offsetX) / scaleX;
-      const imgY = (clickY - offsetY) / scaleY;
-
-      // Find region whose box contains point, checking smallest boxes first (top-most)
-      const matches = visibleRegions.filter((r) => {
-        const [x, y, w, h] = r.box;
-        return imgX >= x && imgX <= x + w && imgY >= y && imgY <= y + h;
-      });
-
-      if (matches.length === 0) return null;
-      matches.sort((a, b) => a.box[2] * a.box[3] - b.box[2] * b.box[3]);
-      return matches[0] ?? null;
-    },
-    [renderMetrics, visibleRegions],
-  );
-
+  // Pointer hit testing for sparse regions & cursor depth probe
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const region = getRegionAtPoint(e.clientX, e.clientY);
-    onRegionHover?.(region);
-  };
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.clientX - rect.left;
+    const clientY = e.clientY - rect.top;
 
-  const handlePointerLeave = () => {
+    // For depth task, track probe coordinates
+    if (task === "depth") {
+      setProbeCoords({ x: clientX, y: clientY });
+    }
+
+    if (visibleRegions.length === 0) return;
+
+    const scaleX = sourceWidth / containerSize.width;
+    const scaleY = sourceHeight / containerSize.height;
+    const imgX = clientX * scaleX;
+    const imgY = clientY * scaleY;
+
+    // Hit test reverse order (topmost first)
+    for (let i = visibleRegions.length - 1; i >= 0; i--) {
+      const reg = visibleRegions[i]!;
+      const [bx, by, bw, bh] = reg.box;
+      if (imgX >= bx && imgX <= bx + bw && imgY >= by && imgY <= by + bh) {
+        onRegionHover?.(reg);
+        return;
+      }
+    }
     onRegionHover?.(null);
   };
 
-  const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const region = getRegionAtPoint(e.clientX, e.clientY);
-    onRegionSelect?.(region);
+  const handlePointerLeave = () => {
+    if (task === "depth") {
+      setProbeCoords(null);
+    }
+    onRegionHover?.(null);
   };
 
-  // Keyboard navigation for accessible listbox (R62)
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (visibleRegions.length === 0) {
+      onRegionSelect?.(null);
+      return;
+    }
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.clientX - rect.left;
+    const clientY = e.clientY - rect.top;
+
+    const scaleX = sourceWidth / containerSize.width;
+    const scaleY = sourceHeight / containerSize.height;
+    const imgX = clientX * scaleX;
+    const imgY = clientY * scaleY;
+
+    for (let i = visibleRegions.length - 1; i >= 0; i--) {
+      const reg = visibleRegions[i]!;
+      const [bx, by, bw, bh] = reg.box;
+      if (imgX >= bx && imgX <= bx + bw && imgY >= by && imgY <= by + bh) {
+        onRegionSelect?.(reg);
+        const accIdx = accessibleRegions.findIndex((r) => r.id === reg.id);
+        if (accIdx >= 0) setFocusedIndex(accIdx);
+        return;
+      }
+    }
+    onRegionSelect?.(null);
+  };
+
+  // Keyboard navigation for roving focus layer (R62)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (sortedRegionsForA11y.length === 0) return;
+    if (accessibleRegions.length === 0) return;
 
     if (e.key === "ArrowDown" || e.key === "ArrowRight") {
       e.preventDefault();
-      const nextIdx = (activeIndex + 1) % sortedRegionsForA11y.length;
-      onRegionSelect?.(sortedRegionsForA11y[nextIdx] ?? null);
+      setFocusedIndex((prev) => {
+        const next = prev + 1 >= accessibleRegions.length ? 0 : prev + 1;
+        const reg = accessibleRegions[next] || null;
+        onRegionSelect?.(reg);
+        return next;
+      });
     } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
       e.preventDefault();
-      const prevIdx =
-        (activeIndex - 1 + sortedRegionsForA11y.length) %
-        sortedRegionsForA11y.length;
-      onRegionSelect?.(sortedRegionsForA11y[prevIdx] ?? null);
+      setFocusedIndex((prev) => {
+        const next = prev - 1 < 0 ? accessibleRegions.length - 1 : prev - 1;
+        const reg = accessibleRegions[next] || null;
+        onRegionSelect?.(reg);
+        return next;
+      });
     } else if (e.key === "Home") {
       e.preventDefault();
-      onRegionSelect?.(sortedRegionsForA11y[0] ?? null);
+      setFocusedIndex(0);
+      onRegionSelect?.(accessibleRegions[0] || null);
     } else if (e.key === "End") {
       e.preventDefault();
-      onRegionSelect?.(
-        sortedRegionsForA11y[sortedRegionsForA11y.length - 1] ?? null,
-      );
-    } else if (e.key === "Escape") {
+      const last = accessibleRegions.length - 1;
+      setFocusedIndex(last);
+      onRegionSelect?.(accessibleRegions[last] || null);
+    } else if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      onRegionSelect?.(null);
+      if (focusedIndex >= 0 && focusedIndex < accessibleRegions.length) {
+        onRegionSelect?.(accessibleRegions[focusedIndex] || null);
+      }
     }
   };
 
-  const activeRegion =
-    activeIndex >= 0 ? sortedRegionsForA11y[activeIndex] : null;
+  const activeDescendantId =
+    focusedIndex >= 0 && accessibleRegions[focusedIndex]
+      ? `region-opt-${accessibleRegions[focusedIndex].id}`
+      : undefined;
 
   return (
     <div
       ref={containerRef}
-      className={`relative w-full h-full flex items-center justify-center bg-[#0A0C10] select-none overflow-hidden ${className}`}
+      className={`relative w-full h-full min-h-[360px] bg-[#0A0C10] select-none flex items-center justify-center overflow-hidden ${className}`}
     >
-      {/* Background Media Element */}
-      {mediaUrl && mediaType === "image" && (
-        <img
-          src={mediaUrl}
-          alt="Source media for vision task"
-          className="absolute max-w-full max-h-full object-contain pointer-events-none"
-          style={{
-            width: renderMetrics.drawWidth,
-            height: renderMetrics.drawHeight,
-          }}
-        />
+      {/* Background Media Layer */}
+      {mediaUrl ? (
+        mediaType === "video" ? (
+          <video
+            src={mediaUrl}
+            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+            playsInline
+            muted
+          />
+        ) : (
+          <img
+            src={mediaUrl}
+            alt="Source media under analysis"
+            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+          />
+        )
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center text-xs font-mono text-[#64748B]">
+          [Synthetic Test Viewport: {sourceWidth}×{sourceHeight}]
+        </div>
       )}
 
-      {/* Interactive Overlay Canvas */}
+      {/* Artifact Error Banner Overlay (R58) */}
+      {artifactError && (
+        <div className="absolute inset-x-4 top-4 z-20 p-3 rounded-[6px] bg-[#2A1517] border border-[#F87171]/40 text-[#FCA5A5] text-xs font-mono flex items-center justify-between shadow-lg">
+          <span>{artifactError}</span>
+        </div>
+      )}
+
+      {/* 2D Canvas Layer */}
       <canvas
         ref={canvasRef}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
-        onClick={handleClick}
-        className="absolute inset-0 w-full h-full cursor-crosshair z-10"
-        style={{
-          width: containerSize.width,
-          height: containerSize.height,
-        }}
+        onPointerDown={handlePointerDown}
+        style={{ width: containerSize.width, height: containerSize.height }}
+        className="absolute inset-0 cursor-crosshair z-10 touch-none"
       />
 
-      {/* Accessible Fallback Tree (R62) - One composite listbox widget */}
+      {/* Screen Reader Long Description for Complex Dense Images (KTD4, W3C strategy) */}
+      {accessibleDescription && (
+        <div
+          role="region"
+          aria-label="Scene Analysis Summary"
+          className="sr-only"
+        >
+          {accessibleDescription}
+        </div>
+      )}
+
+      {/* Accessible Roving-Focus Region Layer (R62, KTD3) */}
       <div
         ref={listboxRef}
         role="listbox"
         tabIndex={0}
-        aria-label="Detected visual regions in image"
-        aria-activedescendant={activeRegion ? activeRegion.id : undefined}
+        aria-label={`Visual detections: ${accessibleRegions.length} objects in frame`}
+        aria-activedescendant={activeDescendantId}
         onKeyDown={handleKeyDown}
-        className="sr-only focus:not-sr-only focus:absolute focus:bottom-2 focus:left-2 focus:z-30 focus:p-2 focus:bg-[#12151C] focus:border focus:border-[#22D3EE] focus:rounded focus:text-xs focus:font-mono focus:text-[#E8EAED]"
+        className="sr-only focus:not-sr-only focus:absolute focus:bottom-2 focus:left-2 focus:z-30 focus:p-2 focus:bg-[#12151C] focus:border focus:border-[#22D3EE] focus:rounded focus:text-xs focus:font-mono focus:text-[#E8EAED] focus:shadow-xl"
       >
-        <span className="text-[11px] text-[#22D3EE] block mb-1">
-          Region Layer (Use Arrow keys to navigate, Esc to deselect)
-        </span>
-        {sortedRegionsForA11y.map((region) => {
-          const isSelected = region.id === options.activeRegionId;
-          const trackText =
-            region.trackId !== undefined ? `Track ${region.trackId}, ` : "";
-          const confidenceText = `${Math.round(region.confidence * 100)}% confidence`;
-          const posText = `at [${region.box.map((v) => Math.round(v)).join(", ")}]`;
-          const accessibleLabel = `${trackText}${sanitizeText(region.className)}, ${confidenceText}, ${posText}`;
+        <div className="text-[10px] text-[#22D3EE] pb-1">
+          Use Arrow keys to explore regions ({accessibleRegions.length} total):
+        </div>
+        {accessibleRegions.map((reg, idx) => {
+          const isFocused = idx === focusedIndex;
+          const labelText = `${sanitizeText(reg.className)}, confidence ${Math.round(
+            reg.confidence * 100,
+          )}% at position [${Math.round(reg.box[0])}, ${Math.round(reg.box[1])}]${
+            reg.trackId !== undefined ? `, track ID ${reg.trackId}` : ""
+          }`;
 
           return (
             <div
-              key={region.id}
-              id={region.id}
+              key={reg.id}
+              id={`region-opt-${reg.id}`}
               role="option"
-              aria-selected={isSelected}
-              className={`p-1 rounded ${isSelected ? "bg-[#22D3EE]/20 font-bold" : ""}`}
+              aria-selected={isFocused}
+              className={`py-0.5 px-1 rounded ${
+                isFocused ? "bg-[#22D3EE]/20 text-[#22D3EE]" : "text-[#9AA3B2]"
+              }`}
             >
-              {accessibleLabel}
+              {labelText}
             </div>
           );
         })}

@@ -1,4 +1,4 @@
-﻿export * from "./types";
+export * from "./types";
 export * from "./palette";
 export * from "./renderers";
 export * from "./CanvasOverlay";
@@ -6,3 +6,4 @@ export * from "./ClassificationViewer";
 export * from "./ResultDataTable";
 export * from "./VideoScrubber";
 export * from "./ViewerShell";
+export * from "./inspector";
