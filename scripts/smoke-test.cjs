@@ -236,6 +236,19 @@ async function runSmokeTests(options = {}) {
 
       const regData = await registerRes.json();
       accessToken = regData.accessToken;
+      if (!accessToken && registerRes.headers) {
+        const getSetCookieFn = registerRes.headers.getSetCookie;
+        const setCookies = typeof getSetCookieFn === 'function'
+          ? registerRes.headers.getSetCookie()
+          : [registerRes.headers.get('set-cookie')].filter(Boolean);
+        for (const cookieStr of setCookies) {
+          const match = cookieStr.match(/(?:^|;\s*)(?:__Host-access_token|access_token)=([^;]+)/);
+          if (match) {
+            accessToken = match[1];
+            break;
+          }
+        }
+      }
       userId = regData.user?.id;
       results.stages.registration = { status: registerRes.status, userId, tokenPresent: Boolean(accessToken) };
       console.log(`  ✅ User registered successfully (User ID: ${userId || 'anonymous'})`);
@@ -243,7 +256,12 @@ async function runSmokeTests(options = {}) {
 
     // Stage 4: Create Job & Presigned Upload Grant
     console.log('\n[Stage 4/7] Requesting Inference Job & Presigned Upload Grant...');
-    const authHeader = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+    const authHeader = accessToken
+      ? {
+          Authorization: `Bearer ${accessToken}`,
+          Cookie: `access_token=${accessToken}; __Host-access_token=${accessToken}`,
+        }
+      : {};
     let jobId = `job_${runId}`;
     let uploadUrl = `${jobsUrl}/mock-upload/${jobId}`;
 

@@ -278,6 +278,7 @@ async function handleRegister(
         id: userId,
         email,
       },
+      accessToken,
     }),
     {
       status: 201,
@@ -427,6 +428,7 @@ async function handleLogin(
         id: user.id,
         email: user.email,
       },
+      accessToken,
     }),
     {
       status: 200,
@@ -564,6 +566,7 @@ async function handleRefresh(
         id: user.id,
         email: user.email,
       },
+      accessToken,
     }),
     {
       status: 200,
