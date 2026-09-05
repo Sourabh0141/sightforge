@@ -35,16 +35,19 @@ inference_secrets = modal.Secret.from_name(
 )
 
 # 4. CPU Container Image: Media probe, decode, and frame extraction (R37)
-# Carries ffmpeg/ffprobe and media libraries; zero PyTorch/CUDA stack to maximize cold start speed.
 cpu_image = (
     modal.Image.debian_slim(python_version="3.11")
-    .apt_install("ffmpeg")
+    .apt_install("ffmpeg", "libgl1-mesa-glx", "libglib2.0-0")
     .pip_install(
         "fastapi[standard]>=0.115.0",
         "pillow>=11.0.0",
         "numpy>=2.0.0",
         "requests>=2.32.0",
         "pydantic>=2.10.0",
+        "torch>=2.4.0",
+        "torchvision>=0.19.0",
+        "ultralytics>=8.3.0",
+        "opencv-python-headless>=4.10.0",
     )
     .add_local_python_source("sightforge_inference")
 )
