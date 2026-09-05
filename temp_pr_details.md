@@ -1,16 +1,16 @@
-# PR Title
+﻿# PR Title
 
-fix(deploy): allow inline script execution in CSP and configure edge service bindings
+fix(web): configure cloudflare service bindings and CSP inline scripts for hydration and auth
 
 # PR Description
 
 ## Summary
 
-Resolves the client-side blank screen on page load, fixes user registration / API proxying across sibling Cloudflare Workers, and aligns deployment pipeline contracts:
+Resolves the client-side blank screen on initial page load, fixes user registration and authentication failure across sibling Cloudflare Workers, and solidifies edge proxying and CORS policies:
 
-1. **Content Security Policy Inline Script Unblocking (`apps/web/public/_headers`)**: Next.js App Router static export (`output: 'export'`) embeds React Server Component (RSC) flight data as inline `<script>` tags (`self.__next_f.push(...)`). Because `_headers` restricted `script-src` to `'self' 'wasm-unsafe-eval'` without `'unsafe-inline'`, the browser blocked all inline Flight scripts, causing the Next.js React 19 Flight client to throw `Uncaught Error: Connection closed.` and unmount the DOM into a black screen (`#0A0C10`). Updated `_headers` to include `'unsafe-inline'` in `script-src` and permitted `*.workers.dev` and `wss://*.workers.dev` in `connect-src`.
-2. **Cloudflare Service Bindings Configuration (`apps/web/wrangler.jsonc`)**: Configured direct Worker-to-Worker Service Bindings for `AUTH_SERVICE` (`sightforge-api-auth-prod`), `JOBS_SERVICE` (`sightforge-api-jobs-prod`), and `EVENTS_SERVICE` (`sightforge-events-prod`). This enables zero-latency in-process RPC calls without public DNS or host header mismatches.
-3. **Web Worker Edge API Proxying & Host Header Stripping (`apps/web/src/index.ts`)**: Implemented intelligent edge reverse-proxying in `sightforge-web-prod` for `/auth/*`, `/jobs/*`, `/account`, and `/events/*` / `/callbacks/*` traffic targeting sibling Cloudflare Workers. For fetch fallback proxying, stripped `host` and Cloudflare routing headers (`cf-connecting-ip`, `cf-ray`, etc.) so subrequests route cleanly to target microservices.
+1. **Content Security Policy Inline Script Unblocking (`apps/web/public/_headers`)**: Next.js 15 App Router static export (`output: "export"`) embeds React Server Component (RSC) Flight stream data in inline `<script>` tags (`self.__next_f.push(...)`). Because `_headers` restricted `script-src` to `'self' 'wasm-unsafe-eval'` without `'unsafe-inline'`, the browser blocked all inline Flight scripts, causing the Next.js React 19 Flight client to throw `Uncaught Error: Connection closed.` and unmount the DOM into a black screen (`#0A0C10`). Updated `_headers` to include `'unsafe-inline'` in `script-src` and permitted `*.workers.dev` and `wss://*.workers.dev` in `connect-src`.
+2. **Cloudflare Service Bindings Configuration (`apps/web/wrangler.jsonc`)**: Declared direct Worker-to-Worker Service Bindings for `AUTH_SERVICE` (`sightforge-api-auth-prod`), `JOBS_SERVICE` (`sightforge-api-jobs-prod`), and `EVENTS_SERVICE` (`sightforge-events-prod`). This enables zero-latency in-process RPC calls without public DNS or host header mismatches.
+3. **Web Worker Edge API Proxying & Header Sanitization (`apps/web/src/index.ts`)**: Implemented intelligent edge reverse-proxying in `sightforge-web-prod` for `/auth/*`, `/jobs/*`, `/account`, and `/events/*` / `/callbacks/*` traffic targeting sibling Cloudflare Workers. For HTTP fallback proxying, stripped incoming `host` and Cloudflare routing headers (`cf-connecting-ip`, `cf-ray`, etc.) so subrequests route cleanly to target microservices.
 4. **CORS & Origin Allow-List Updates (`packages/worker-kit/src/cors.ts`)**: Updated `isOriginAllowed` to support `*.workers.dev` and `*.sightforge.app` origin domains for preview, staging, and workers.dev environments.
 5. **Removed Obsolete `public/index.html`**: Deleted leftover static `public/index.html` which could conflict with Next.js App Router prerendered export.
 6. **Smoke Test Stage 7 Contract Alignment (`scripts/smoke-test.cjs`)**: In `apps/api-jobs`, `handleGetJobResults` requires completed jobs and returns `HTTP 400` with `"Results are only available for completed jobs."` for newly created or in-progress jobs. Updated `scripts/smoke-test.cjs` to recognize `HTTP 400` alongside `200`, `202`, and `404` as a valid contract response for in-progress jobs.
