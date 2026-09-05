@@ -107,11 +107,11 @@ jobs:
       - name: "Step 6 - Deploy Cloudflare Workers & Modal App (Tagged: ${{ github.sha }})"
         run: |
           echo "Deploying Cloudflare Workers with commit tag ${{ github.sha }}..."
-          pnpm --filter sightforge-web exec wrangler deploy --message "Release ${{ github.sha }}"
-          pnpm --filter sightforge-api-auth exec wrangler deploy --message "Release ${{ github.sha }}"
-          pnpm --filter sightforge-api-jobs exec wrangler deploy --message "Release ${{ github.sha }}"
-          pnpm --filter sightforge-events exec wrangler deploy --message "Release ${{ github.sha }}"
-          pnpm --filter sightforge-scheduler exec wrangler deploy --message "Release ${{ github.sha }}"
+          pnpm --filter sightforge-web exec wrangler deploy
+          pnpm --filter sightforge-api-auth exec wrangler deploy
+          pnpm --filter sightforge-api-jobs exec wrangler deploy
+          pnpm --filter sightforge-events exec wrangler deploy
+          pnpm --filter sightforge-scheduler exec wrangler deploy
 
           echo "Deploying Modal Inference App with commit tag ${{ github.sha }}..."
           uv run modal deploy services/inference/src/sightforge_inference/endpoint.py --name sightforge-inference

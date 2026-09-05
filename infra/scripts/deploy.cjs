@@ -121,7 +121,7 @@ async function main() {
 
   for (const worker of workers) {
     console.log(`\nDeploying ${worker}...`);
-    run(`pnpm --filter ${worker} exec wrangler deploy --message "Release ${commitSha}"`);
+    run(`pnpm --filter ${worker} exec wrangler deploy`);
   }
 
   if (!skipModal) {
