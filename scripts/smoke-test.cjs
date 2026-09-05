@@ -53,17 +53,93 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
 }
 
 /**
+ * Queries Cloudflare API for the account workers.dev subdomain.
+ */
+async function fetchCloudflareSubdomain(accountId, apiToken, customFetch = fetchWithTimeout) {
+  if (!accountId || !apiToken) return null;
+  try {
+    const res = await customFetch(
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/subdomain`,
+      {
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          'Content-Type': 'application/json',
+        },
+      },
+      8000,
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.result?.subdomain || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Core smoke test orchestration function.
  */
 async function runSmokeTests(options = {}) {
-  const targetUrl = (options.targetUrl || process.env.DEPLOY_URL || 'https://sightforge.app').replace(/\/$/, '');
+  let targetUrl = (options.targetUrl || process.env.DEPLOY_URL || 'https://sightforge.app').replace(/\/$/, '');
+  let authUrl = (options.authUrl || process.env.AUTH_URL || '').replace(/\/$/, '');
+  let jobsUrl = (options.jobsUrl || process.env.JOBS_URL || '').replace(/\/$/, '');
+  let webUrl = (options.webUrl || process.env.WEB_URL || '').replace(/\/$/, '');
+  let subdomain = options.subdomain || process.env.CLOUDFLARE_WORKERS_SUBDOMAIN || process.env.CF_SUBDOMAIN;
+
   const isMock = options.isMock ?? false;
   const isDryRun = options.isDryRun ?? false;
   const customFetch = options.fetchFn || (isMock ? null : fetchWithTimeout);
 
+  // Dynamic endpoint resolution for live production and workers.dev subdomains
+  if (!isMock && customFetch && (!authUrl || !jobsUrl)) {
+    let isTargetReachable = false;
+    try {
+      const probeRes =
+        (await customFetch(`${targetUrl}/health`, {}, 4000).catch(() => null)) ||
+        (await customFetch(`${targetUrl}/`, {}, 4000).catch(() => null));
+      if (probeRes && probeRes.ok) {
+        isTargetReachable = true;
+      }
+    } catch {
+      isTargetReachable = false;
+    }
+
+    if (isTargetReachable) {
+      authUrl = authUrl || targetUrl;
+      jobsUrl = jobsUrl || targetUrl;
+      webUrl = webUrl || targetUrl;
+    } else {
+      if (!subdomain && process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN) {
+        subdomain = await fetchCloudflareSubdomain(
+          process.env.CLOUDFLARE_ACCOUNT_ID,
+          process.env.CLOUDFLARE_API_TOKEN,
+          customFetch,
+        );
+      }
+
+      if (subdomain) {
+        console.log(`ℹ️ Base target "${targetUrl}" unrouted; dynamically using Cloudflare workers.dev subdomain: "${subdomain}"`);
+        authUrl = authUrl || `https://sightforge-api-auth-prod.${subdomain}.workers.dev`;
+        jobsUrl = jobsUrl || `https://sightforge-api-jobs-prod.${subdomain}.workers.dev`;
+        webUrl = webUrl || `https://sightforge-web-prod.${subdomain}.workers.dev`;
+        targetUrl = webUrl;
+      } else {
+        authUrl = authUrl || targetUrl;
+        jobsUrl = jobsUrl || targetUrl;
+        webUrl = webUrl || targetUrl;
+      }
+    }
+  } else {
+    authUrl = authUrl || targetUrl;
+    jobsUrl = jobsUrl || targetUrl;
+    webUrl = webUrl || targetUrl;
+  }
+
   console.log('='.repeat(70));
   console.log('🧪 SightForge Post-Deployment Smoke Test Suite (R91)');
   console.log(`Target Base URL: ${targetUrl}`);
+  if (authUrl !== targetUrl) console.log(`Auth Endpoint:   ${authUrl}`);
+  if (jobsUrl !== targetUrl) console.log(`Jobs Endpoint:   ${jobsUrl}`);
   console.log(`Mode: ${isMock ? 'MOCK / SIMULATED' : isDryRun ? 'DRY-RUN' : 'LIVE PRODUCTION'}`);
   console.log('='.repeat(70));
 
@@ -88,8 +164,11 @@ async function runSmokeTests(options = {}) {
       results.stages.health = { status: 200, service: 'sightforge-web', healthy: true };
       console.log('  ✅ [MOCK] Health check returned HTTP 200 OK');
     } else {
-      const healthRes = await customFetch(`${targetUrl}/health`).catch(() => null) ||
-                        await customFetch(`${targetUrl}/`);
+      const healthRes =
+        (await customFetch(`${webUrl}/health`).catch(() => null)) ||
+        (await customFetch(`${webUrl}/`).catch(() => null)) ||
+        (await customFetch(`${jobsUrl}/health`).catch(() => null)) ||
+        (await customFetch(`${authUrl}/health`));
       if (!healthRes.ok) {
         throw new Error(`Health check failed with HTTP ${healthRes.status}`);
       }
@@ -106,7 +185,7 @@ async function runSmokeTests(options = {}) {
       results.stages.salt = { status: 200, clientSalt: saltHex, argon2Params };
       console.log('  ✅ [MOCK] Salt lookup returned deterministic pseudo-salt');
     } else {
-      const saltRes = await customFetch(`${targetUrl}/auth/salt?email=${encodeURIComponent(testEmail)}`);
+      const saltRes = await customFetch(`${authUrl}/auth/salt?email=${encodeURIComponent(testEmail)}`);
       if (!saltRes.ok) {
         throw new Error(`Salt lookup failed with HTTP ${saltRes.status}`);
       }
@@ -132,7 +211,7 @@ async function runSmokeTests(options = {}) {
       results.stages.registration = { status: 201, userId, tokenPresent: true };
       console.log('  ✅ [MOCK] User registered successfully with test token bypass');
     } else {
-      const registerRes = await customFetch(`${targetUrl}/auth/register`, {
+      const registerRes = await customFetch(`${authUrl}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -161,14 +240,14 @@ async function runSmokeTests(options = {}) {
     console.log('\n[Stage 4/7] Requesting Inference Job & Presigned Upload Grant...');
     const authHeader = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
     let jobId = `job_${runId}`;
-    let uploadUrl = `${targetUrl}/mock-upload/${jobId}`;
+    let uploadUrl = `${jobsUrl}/mock-upload/${jobId}`;
 
     if (isMock) {
       results.stages.createJob = { status: 201, jobId, uploadUrlPresent: true };
       results.jobId = jobId;
       console.log(`  ✅ [MOCK] Job created: ${jobId}`);
     } else {
-      const createJobRes = await customFetch(`${targetUrl}/jobs`, {
+      const createJobRes = await customFetch(`${jobsUrl}/jobs`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -225,11 +304,13 @@ async function runSmokeTests(options = {}) {
       results.stages.status = { status: 200, jobStatus: 'created' };
       console.log('  ✅ [MOCK] Status endpoint returned valid job state');
     } else {
-      const statusRes = await customFetch(`${targetUrl}/jobs/${jobId}/status`, {
-        headers: { ...authHeader },
-      }).catch(() => null) || await customFetch(`${targetUrl}/jobs/${jobId}`, {
-        headers: { ...authHeader },
-      });
+      const statusRes =
+        (await customFetch(`${jobsUrl}/jobs/${jobId}/status`, {
+          headers: { ...authHeader },
+        }).catch(() => null)) ||
+        (await customFetch(`${jobsUrl}/jobs/${jobId}`, {
+          headers: { ...authHeader },
+        }));
 
       if (!statusRes.ok) {
         throw new Error(`Status polling failed with HTTP ${statusRes.status}`);
@@ -245,7 +326,7 @@ async function runSmokeTests(options = {}) {
       results.stages.results = { status: 200, resultsAccessible: true };
       console.log('  ✅ [MOCK] Results endpoint contract validated');
     } else {
-      const resultsRes = await customFetch(`${targetUrl}/jobs/${jobId}/results`, {
+      const resultsRes = await customFetch(`${jobsUrl}/jobs/${jobId}/results`, {
         headers: { ...authHeader },
       });
       // In a fresh job before completion, 200, 202, or 404 (not ready) is an expected API contract response
@@ -280,10 +361,26 @@ async function runSmokeTests(options = {}) {
 async function runCli() {
   const args = process.argv.slice(2);
   let targetUrl = process.env.DEPLOY_URL || 'https://sightforge.app';
+  let authUrl = process.env.AUTH_URL;
+  let jobsUrl = process.env.JOBS_URL;
+  let webUrl = process.env.WEB_URL;
+  let subdomain = process.env.CLOUDFLARE_WORKERS_SUBDOMAIN || process.env.CF_SUBDOMAIN;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--target' && args[i + 1]) {
       targetUrl = args[i + 1];
+      i++;
+    } else if (args[i] === '--auth-target' && args[i + 1]) {
+      authUrl = args[i + 1];
+      i++;
+    } else if (args[i] === '--jobs-target' && args[i + 1]) {
+      jobsUrl = args[i + 1];
+      i++;
+    } else if (args[i] === '--web-target' && args[i + 1]) {
+      webUrl = args[i + 1];
+      i++;
+    } else if (args[i] === '--subdomain' && args[i + 1]) {
+      subdomain = args[i + 1];
       i++;
     }
   }
@@ -291,7 +388,15 @@ async function runCli() {
   const isMock = args.includes('--mock');
   const isDryRun = args.includes('--dry-run');
 
-  const results = await runSmokeTests({ targetUrl, isMock, isDryRun });
+  const results = await runSmokeTests({
+    targetUrl,
+    authUrl,
+    jobsUrl,
+    webUrl,
+    subdomain,
+    isMock,
+    isDryRun,
+  });
   if (!results.passed) {
     process.exit(1);
   }
@@ -303,7 +408,9 @@ if (require.main === module) {
 
 module.exports = {
   runSmokeTests,
+  fetchCloudflareSubdomain,
   deriveTestClientKey,
   TURNSTILE_TEST_TOKEN,
   SAMPLE_IMAGE_PNG,
 };
+

@@ -267,4 +267,96 @@ describe("Post-Deployment Smoke Test Suite (R91)", () => {
     expect(results.passed).toBe(false);
     expect(results.error).toContain("Health check failed with HTTP 500");
   });
+  it("dynamically resolves Cloudflare workers.dev subdomain when target is unrouted", async () => {
+    const subdomainRequests: string[] = [];
+    const mockWorkersFetch = async (url: string) => {
+      subdomainRequests.push(url);
+      if (url.includes("unrouted-domain")) {
+        throw new Error("fetch failed (ENOTFOUND)");
+      }
+      if (url.includes("/health") || url.endsWith(".workers.dev/")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ status: "ready" }),
+        };
+      }
+      if (url.includes("/auth/salt")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            clientSalt: "abcd1234abcd1234abcd1234abcd1234",
+          }),
+        };
+      }
+      if (url.includes("/auth/register")) {
+        return {
+          ok: true,
+          status: 201,
+          json: async () => ({
+            accessToken: "test-jwt-token",
+            user: { id: "usr_123" },
+          }),
+        };
+      }
+      if (
+        url.includes("/jobs") &&
+        !url.includes("/status") &&
+        !url.includes("/results")
+      ) {
+        return {
+          ok: true,
+          status: 201,
+          json: async () => ({
+            jobId: "job_subdomain_789",
+            uploadUrl: "https://r2.sightforge.internal/upload/job_789",
+            status: "created",
+          }),
+        };
+      }
+      if (url.includes("https://r2.sightforge.internal/upload/job_789")) {
+        return { ok: true, status: 200 };
+      }
+      if (url.includes("/jobs/job_subdomain_789/status")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ status: "created", progress: 0 }),
+        };
+      }
+      if (url.includes("/jobs/job_subdomain_789/results")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ jobId: "job_subdomain_789", results: [] }),
+        };
+      }
+      return {
+        ok: false,
+        status: 404,
+        json: async () => ({ error: "Not Found" }),
+      };
+    };
+
+    const results = (await runSmokeTests({
+      targetUrl: "https://unrouted-domain.sightforge.app",
+      subdomain: "test-cf-user",
+      fetchFn: mockWorkersFetch,
+    })) as SmokeTestResult;
+
+    expect(results.passed).toBe(true);
+    expect(results.stages.health?.healthy).toBe(true);
+    expect(results.stages.createJob?.jobId).toBe("job_subdomain_789");
+    expect(
+      subdomainRequests.some((url) =>
+        url.includes("sightforge-api-auth-prod.test-cf-user.workers.dev"),
+      ),
+    ).toBe(true);
+    expect(
+      subdomainRequests.some((url) =>
+        url.includes("sightforge-api-jobs-prod.test-cf-user.workers.dev"),
+      ),
+    ).toBe(true);
+  });
 });
