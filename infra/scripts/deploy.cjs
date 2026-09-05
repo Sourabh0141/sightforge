@@ -78,7 +78,11 @@ async function main() {
   // Step 3: Apply Infrastructure via Terraform (P1 U5, R79, R89)
   logStep(3, 'Applying Cloudflare Infrastructure via Terraform');
   if (!skipInfra) {
-    run('terraform init -input=false', TF_DIR);
+    const cfAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+    const backendConfigArg = cfAccountId
+      ? ` -backend-config="endpoints={s3=\\"https://${cfAccountId}.r2.cloudflarestorage.com\\"}"`
+      : '';
+    run(`terraform init -input=false${backendConfigArg}`, TF_DIR);
     run('terraform apply -auto-approve -input=false', TF_DIR);
   } else {
     console.log('Skipping Terraform apply (--skip-infra flag passed)');
