@@ -10,6 +10,7 @@ dist/
 build/
 out/
 .agents/
+.playwright-mcp/
 uv.lock
 docs/plans/2026-*.md
 docs/plans/sightforge-stitch-prompts.md

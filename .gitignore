@@ -59,6 +59,10 @@ Thumbs.db
 # Design reference assets
 docs/html/
 
+# Playwright & test artifacts
+.playwright-mcp/
+test_live.png
+
 # Temporary PR descriptions
 PR_*.md
 
