@@ -5,7 +5,7 @@
  * for quarantined R2 uploads (R16, R20, R21, R23, KTD7, AE2).
  */
 
-import defaultsConfig from "../../../config/defaults.json" with { type: "json" };
+import defaultsConfig from "../../../config/defaults.json";
 
 export const MAX_IMAGE_SIZE_BYTES = defaultsConfig.media.maxImageSizeBytes; // 10,485,760 bytes (10MB)
 export const MAX_VIDEO_SIZE_BYTES = defaultsConfig.media.maxVideoSizeBytes; // 52,428,800 bytes (50MB)
