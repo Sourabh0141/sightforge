@@ -113,7 +113,7 @@ When a unit cites an R-ID you do not recognise, look it up in the requirements c
 - [x] 26 · **P4 U2** — credential derivation and session handling
 - [x] 27 · **P4 U3** — the five sparse visualizations
 - [x] 28 · **P4 U4** — the two dense visualizations + raw inspector
-- [ ] 29 · **P4 U5** — application surface: upload, configuration, live status, history
+- [x] 29 · **P4 U5** — application surface: upload, configuration, live status, history
 - [ ] 30 · **P4 U6** — public demo gallery, fed by step 19's real fixtures
 - [ ] 31 · **P4 U7** — accessibility conformance + responsive pass
 
