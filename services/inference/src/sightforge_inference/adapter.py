@@ -37,7 +37,6 @@ class InferenceConfig:
     device: str = "cuda"
 
 
-
 @dataclass(frozen=True)
 class ReversalSurface:
     """Documents the 5-element reversal surface for replacing the AGPL dependency per task (R40)."""

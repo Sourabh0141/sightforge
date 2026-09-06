@@ -2,6 +2,7 @@
 
 import hashlib
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sightforge_inference.config import (
@@ -11,6 +12,8 @@ from sightforge_inference.config import (
 )
 from sightforge_inference.weights import (
     compute_file_sha256,
+    download_weight_checkpoint,
+    ensure_weights_cached,
     get_weight_metadata,
     get_weight_path,
     verify_weight_checksum,
@@ -72,15 +75,10 @@ def test_checksum_verification(tmp_path: Path) -> None:
 
 def test_ensure_weights_cached_existing(tmp_path: Path) -> None:
     """Verifies that ensure_weights_cached reuses existing verified file without download."""
-    from sightforge_inference.weights import ensure_weights_cached
-
     meta = get_weight_metadata("detection", "nano")
     assert meta is not None
 
     weight_file = tmp_path / meta.filename
-    # Write matching checksum content
-    from unittest.mock import MagicMock, patch
-
     with patch("sightforge_inference.weights.verify_weight_checksum", return_value=True):
         weight_file.write_bytes(b"dummy_data")
         result = ensure_weights_cached("detection", "nano", base_dir=tmp_path)
@@ -89,9 +87,6 @@ def test_ensure_weights_cached_existing(tmp_path: Path) -> None:
 
 def test_download_weight_checkpoint(tmp_path: Path) -> None:
     """Verifies download_weight_checkpoint downloads, computes sha256, and atomically saves."""
-    from unittest.mock import MagicMock, patch
-    from sightforge_inference.weights import download_weight_checkpoint
-
     meta = get_weight_metadata("detection", "nano")
     assert meta is not None
 
@@ -115,4 +110,3 @@ def test_download_weight_checkpoint(tmp_path: Path) -> None:
         saved_path = download_weight_checkpoint("detection", "nano", base_dir=tmp_path)
         assert saved_path.exists()
         assert saved_path.read_bytes() == dummy_content
-

@@ -81,7 +81,7 @@ gpu_image = (
     timeout=600,
 )
 def seed_weights_volume() -> dict[str, bool]:
-    """Modal administrative task to download and seed all verified model checkpoints to the volume."""
+    """Modal administrative task to download and seed verified model checkpoints."""
     from .weights import seed_all_weights
 
     print("Beginning model weights seeding into persistent volume...")
@@ -90,4 +90,3 @@ def seed_weights_volume() -> dict[str, bool]:
         print(f"  {'[OK]' if ok else '[FAIL]'} {key}")
     print("Model weights seeding completed.")
     return results
-

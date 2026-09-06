@@ -67,7 +67,6 @@ class TriggerPayload:
     callback_base_url: str | None = None
 
 
-
 def compute_callback_signature(secret: str, timestamp: int, raw_body: str) -> str:
     """Computes HMAC-SHA256 hex digest over '${timestamp}.${raw_body}' (R46, AE12)."""
     signing_input = f"{timestamp}.{raw_body}".encode()
@@ -222,7 +221,9 @@ def execute_job_orchestration(
     raw_classes = payload.get("classes")
     classes: list[int] | None = None
     if isinstance(raw_classes, list):
-        classes = [int(c) for c in raw_classes if isinstance(c, (int, float, str)) and str(c).isdigit()]
+        classes = [
+            int(c) for c in raw_classes if isinstance(c, (int, float, str)) and str(c).isdigit()
+        ]
     elif isinstance(raw_classes, str) and raw_classes.strip():
         try:
             parsed = json.loads(raw_classes)

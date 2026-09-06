@@ -62,13 +62,7 @@ from .tasks import (
     get_task_adapter,
 )
 from .tasks.pose import COCO_KEYPOINT_NAMES
-from .weights import (
-    ensure_weights_cached,
-    get_weight_metadata,
-    get_weight_path,
-    verify_weight_checksum,
-)
-
+from .weights import ensure_weights_cached
 
 # Named constant for mid-tier GPU accelerator (T4 / A10G / L4) per U7 benchmark plan
 GPU_ACCELERATOR: str = "T4"

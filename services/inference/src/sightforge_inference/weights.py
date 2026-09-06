@@ -4,6 +4,7 @@ Implements strict SHA-256 integrity verification for checkpoint loading and Volu
 population to prevent untrusted code execution from altered weights (R39).
 """
 
+import contextlib
 import hashlib
 import os
 from pathlib import Path
@@ -62,7 +63,7 @@ def download_weight_checkpoint(
     base_dir: Path | str = WEIGHTS_MOUNT_PATH,
     timeout: float = 120.0,
 ) -> Path:
-    """Downloads model checkpoint from metadata URL, verifies SHA-256, and saves atomically (R39)."""
+    """Downloads model checkpoint from metadata URL, verifies SHA-256, and saves atomically."""
     metadata = get_weight_metadata(task, variant)
     if not metadata:
         raise ValueError(
@@ -111,7 +112,7 @@ def ensure_weights_cached(
     base_dir: Path | str = WEIGHTS_MOUNT_PATH,
     volume: Any | None = None,
 ) -> Path:
-    """Ensures model weight checkpoint is present and verified on disk/volume, downloading if missing (R39)."""
+    """Ensures model weight checkpoint is present and verified, downloading if missing."""
     metadata = get_weight_metadata(task, variant)
     if not metadata:
         raise ValueError(
@@ -127,10 +128,8 @@ def ensure_weights_cached(
 
     # Persist to Modal volume if volume is provided
     if volume is not None and hasattr(volume, "commit"):
-        try:
+        with contextlib.suppress(Exception):
             volume.commit()
-        except Exception:
-            pass
 
     return downloaded_path
 
@@ -146,14 +145,12 @@ def seed_all_weights(
         try:
             weight_path = ensure_weights_cached(task, variant, base_dir=base_dir)
             results[key] = verify_weight_checksum(weight_path, meta.sha256)
-        except Exception as exc:
+        except Exception:
             results[key] = False
 
     if volume is not None and hasattr(volume, "commit"):
-        try:
+        with contextlib.suppress(Exception):
             volume.commit()
-        except Exception:
-            pass
 
     return results
 
@@ -166,4 +163,3 @@ def verify_all_weights(base_dir: Path | str = WEIGHTS_MOUNT_PATH) -> dict[str, b
         key = f"{task}:{variant}:{meta.filename}"
         results[key] = verify_weight_checksum(weight_file, meta.sha256)
     return results
-

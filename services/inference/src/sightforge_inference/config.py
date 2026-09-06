@@ -146,4 +146,3 @@ WEIGHT_REGISTRY: dict[tuple[VisionTask, ModelVariant], WeightMetadata] = {
         download_url=f"{YOLO26_RELEASE_BASE}/yolo11s.pt",
     ),
 }
-
