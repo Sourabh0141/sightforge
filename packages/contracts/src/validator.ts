@@ -27,33 +27,52 @@ export function getValidateDefaultsSchema(): ValidateFunction {
   return defaultsValidator;
 }
 
-export const validateResultSchema: ValidateFunction = Object.assign(
-  (data: unknown, ...args: unknown[]) => {
-    return (
-      getValidateResultSchema() as unknown as (...a: unknown[]) => boolean
-    )(data, ...args);
-  },
-  {
-    get errors() {
-      return getValidateResultSchema().errors;
-    },
-    schema: resultSchema,
-  },
-) as unknown as ValidateFunction;
+const validateResultWrapper = (data: unknown, ...args: unknown[]) => {
+  return (getValidateResultSchema() as unknown as (...a: unknown[]) => boolean)(
+    data,
+    ...args,
+  );
+};
 
-export const validateDefaultsSchema: ValidateFunction = Object.assign(
-  (data: unknown, ...args: unknown[]) => {
-    return (
-      getValidateDefaultsSchema() as unknown as (...a: unknown[]) => boolean
-    )(data, ...args);
+Object.defineProperty(validateResultWrapper, "errors", {
+  get() {
+    return getValidateResultSchema().errors;
   },
-  {
-    get errors() {
-      return getValidateDefaultsSchema().errors;
-    },
-    schema: defaultsSchema,
+  enumerable: true,
+  configurable: true,
+});
+
+Object.defineProperty(validateResultWrapper, "schema", {
+  value: resultSchema,
+  enumerable: true,
+  writable: false,
+});
+
+export const validateResultSchema: ValidateFunction =
+  validateResultWrapper as unknown as ValidateFunction;
+
+const validateDefaultsWrapper = (data: unknown, ...args: unknown[]) => {
+  return (
+    getValidateDefaultsSchema() as unknown as (...a: unknown[]) => boolean
+  )(data, ...args);
+};
+
+Object.defineProperty(validateDefaultsWrapper, "errors", {
+  get() {
+    return getValidateDefaultsSchema().errors;
   },
-) as unknown as ValidateFunction;
+  enumerable: true,
+  configurable: true,
+});
+
+Object.defineProperty(validateDefaultsWrapper, "schema", {
+  value: defaultsSchema,
+  enumerable: true,
+  writable: false,
+});
+
+export const validateDefaultsSchema: ValidateFunction =
+  validateDefaultsWrapper as unknown as ValidateFunction;
 
 export function validateResultDocument(data: unknown): {
   valid: boolean;
