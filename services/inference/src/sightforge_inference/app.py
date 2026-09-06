@@ -72,3 +72,22 @@ gpu_image = (
     )
     .add_local_python_source("sightforge_inference")
 )
+
+
+@app.function(
+    image=cpu_image,
+    volumes={WEIGHTS_MOUNT_PATH: weights_volume},
+    secrets=[inference_secrets],
+    timeout=600,
+)
+def seed_weights_volume() -> dict[str, bool]:
+    """Modal administrative task to download and seed all verified model checkpoints to the volume."""
+    from .weights import seed_all_weights
+
+    print("Beginning model weights seeding into persistent volume...")
+    results = seed_all_weights(base_dir=WEIGHTS_MOUNT_PATH, volume=weights_volume)
+    for key, ok in results.items():
+        print(f"  {'[OK]' if ok else '[FAIL]'} {key}")
+    print("Model weights seeding completed.")
+    return results
+

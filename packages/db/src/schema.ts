@@ -111,6 +111,7 @@ export const jobs = sqliteTable(
     errorCode: text("error_code"), // Standardized reason enum
     errorMessage: text("error_message"), // Safe, user-actionable message
     confidenceThreshold: real("confidence_threshold"),
+    classes: text("classes"), // JSON-serialized array of class indices e.g. [0, 2]
     sourceFps: real("source_fps"),
     sampledFps: real("sampled_fps"),
     framesTotal: integer("frames_total"),

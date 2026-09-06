@@ -55,6 +55,7 @@ class TriggerPayload:
     model_variant: ModelVariant
     confidence_threshold: float
     sampled_fps: float | None = None
+    classes: list[int] | None = None
     media_key: str | None = None
     media_etag: str | None = None
     media_get_url: str | None = None
@@ -64,6 +65,7 @@ class TriggerPayload:
     dense_artifact_key: str | None = None
     correlation_id: str | None = None
     callback_base_url: str | None = None
+
 
 
 def compute_callback_signature(secret: str, timestamp: int, raw_body: str) -> str:
@@ -217,6 +219,18 @@ def execute_job_orchestration(
     if sampled_fps is not None:
         sampled_fps = float(sampled_fps)
 
+    raw_classes = payload.get("classes")
+    classes: list[int] | None = None
+    if isinstance(raw_classes, list):
+        classes = [int(c) for c in raw_classes if isinstance(c, (int, float, str)) and str(c).isdigit()]
+    elif isinstance(raw_classes, str) and raw_classes.strip():
+        try:
+            parsed = json.loads(raw_classes)
+            if isinstance(parsed, list):
+                classes = [int(c) for c in parsed]
+        except Exception:
+            pass
+
     media_etag = payload.get("mediaEtag", payload.get("media_etag"))
     media_get_url = payload.get("mediaGetUrl", payload.get("media_get_url"))
     result_put_url = payload.get("resultPutUrl", payload.get("result_put_url"))
@@ -281,6 +295,7 @@ def execute_job_orchestration(
             confidence_threshold=confidence_threshold,
             sampled_fps=manifest.sampled_fps,
             source_fps=manifest.source_fps,
+            classes=classes,
         )
 
         runner_cls = cast(Any, InferenceRunner)._get_user_cls()

@@ -308,6 +308,65 @@ describe("@sightforge/api-jobs - Job Lifecycle Worker", () => {
       expect(json.uploadUrl).toContain("X-Amz-Signature=");
     });
 
+    it("succeeds with custom COCO class filter and stores normalized array", async () => {
+      const req = new Request("http://localhost/jobs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: "https://sightforge.app",
+          Authorization: `Bearer ${tokenA}`,
+          "X-SightForge-Request": "1",
+        },
+        body: JSON.stringify({
+          task: "detection",
+          mode: "per-frame",
+          mediaType: "image",
+          originalFilename: "street.jpg",
+          classes: [2, 0, 2], // car, person, duplicate
+        }),
+      });
+
+      const res = await jobsWorker.fetch(req, env);
+      expect(res.status).toBe(201);
+      const json = (await res.json()) as {
+        jobId: string;
+        classes: number[];
+      };
+      expect(json.classes).toEqual([0, 2]);
+
+      // Check D1 database record
+      const db = drizzle(env.DB);
+      const jobRow = await db
+        .select()
+        .from(jobs)
+        .where(eq(jobs.id, json.jobId))
+        .get();
+      expect(jobRow?.classes).toBe("[0,2]");
+    });
+
+    it("rejects invalid COCO class indices out of [0, 79] range", async () => {
+      const req = new Request("http://localhost/jobs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: "https://sightforge.app",
+          Authorization: `Bearer ${tokenA}`,
+          "X-SightForge-Request": "1",
+        },
+        body: JSON.stringify({
+          task: "detection",
+          mode: "per-frame",
+          mediaType: "image",
+          classes: [0, 999], // 999 is invalid
+        }),
+      });
+
+      const res = await jobsWorker.fetch(req, env);
+      expect(res.status).toBe(400);
+      const json = (await res.json()) as { error: { message: string } };
+      expect(json.error.message).toContain("between 0 and 79");
+    });
+
     it("rejects out-of-range video frame rate (R41)", async () => {
       const req = new Request("http://localhost/jobs", {
         method: "POST",

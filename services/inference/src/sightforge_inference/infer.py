@@ -23,6 +23,7 @@ from .app import (
     frames_volume,
     gpu_image,
     inference_secrets,
+    weights_volume,
 )
 from .config import (
     FRAMES_MOUNT_PATH,
@@ -62,10 +63,12 @@ from .tasks import (
 )
 from .tasks.pose import COCO_KEYPOINT_NAMES
 from .weights import (
+    ensure_weights_cached,
     get_weight_metadata,
     get_weight_path,
     verify_weight_checksum,
 )
+
 
 # Named constant for mid-tier GPU accelerator (T4 / A10G / L4) per U7 benchmark plan
 GPU_ACCELERATOR: str = "T4"
@@ -149,6 +152,7 @@ def run_tracking_pipeline(
                 tracker=str(tracker_yaml),
                 conf=config.confidence_threshold,
                 iou=config.iou_threshold,
+                classes=config.classes,
                 device=config.device if config.device != "cuda" else 0,
                 verbose=False,
             )
@@ -464,12 +468,9 @@ class InferenceRunner:
         # Instantiate task adapter
         self.adapter: BaseYOLOAdapter | None = get_task_adapter(vision_task, variant=model_variant)
 
-        # Resolve weight path from volume and verify checksum
-        weights_path = get_weight_path(vision_task, model_variant)
-        if weights_path.exists():
-            meta = get_weight_metadata(vision_task, model_variant)
-            if meta:
-                verify_weight_checksum(weights_path, meta.sha256)
+        # Resolve weight path from volume, ensure cached, verified, and committed
+        weights_path = ensure_weights_cached(vision_task, model_variant, volume=weights_volume)
+        if self.adapter is not None:
             self.adapter.load_model(weights_path)
 
         self._enter_time: float = time.perf_counter()

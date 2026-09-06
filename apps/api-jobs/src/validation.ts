@@ -34,6 +34,7 @@ export interface CreateJobInput {
   modelVariant?: string;
   originalFilename?: string;
   confidenceThreshold?: number;
+  classes?: number[];
   sourceFps?: number;
   sampledFps?: number;
 }
@@ -45,6 +46,7 @@ export interface ValidatedJobConfig {
   modelVariant: string;
   originalFilename: string;
   confidenceThreshold: number;
+  classes: number[] | null;
   sourceFps: number | null;
   sampledFps: number | null;
   mediaKey: string;
@@ -188,6 +190,31 @@ export function validateCreateJobInput(
     confidenceThreshold = raw.confidenceThreshold;
   }
 
+  // 6.5. Classes Filter Validation (Optional array of COCO class indices 0..79)
+  let classes: number[] | null = null;
+  if (raw.classes !== undefined && raw.classes !== null) {
+    if (!Array.isArray(raw.classes)) {
+      throw new HttpError(
+        400,
+        "invalid-input",
+        "Classes filter must be an array of class index integers.",
+      );
+    }
+    const invalidClass = raw.classes.find(
+      (c) => typeof c !== "number" || !Number.isInteger(c) || c < 0 || c >= 80,
+    );
+    if (invalidClass !== undefined) {
+      throw new HttpError(
+        400,
+        "invalid-input",
+        `Invalid class index: ${invalidClass}. COCO class indices must be integers between 0 and 79.`,
+      );
+    }
+    if (raw.classes.length > 0) {
+      classes = Array.from(new Set(raw.classes)).sort((a, b) => a - b);
+    }
+  }
+
   // 7. Video Frame Rates Validation (R41, R42)
   let sourceFps: number | null = null;
   let sampledFps: number | null = null;
@@ -256,6 +283,7 @@ export function validateCreateJobInput(
     modelVariant,
     originalFilename,
     confidenceThreshold,
+    classes,
     sourceFps,
     sampledFps,
     mediaKey,

@@ -68,6 +68,7 @@ class SemanticSegmentationAdapter(BaseYOLOAdapter):
                 source=frames[0],
                 conf=config.confidence_threshold,
                 iou=config.iou_threshold,
+                classes=config.classes,
                 device=config.device if config.device != "cuda" else 0,
                 verbose=False,
             )
