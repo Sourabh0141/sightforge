@@ -47,10 +47,12 @@ export function drawSemanticSegmentationOverlay({
   ctx.translate(transform.panX, transform.panY);
   ctx.scale(transform.zoom, transform.zoom);
 
-  // Compute resolution scaling
-  const scaleX = canvasWidth / imgWidth;
-  const scaleY = canvasHeight / imgHeight;
-  ctx.scale(scaleX, scaleY);
+  // Compute uniform aspect-ratio scaling (object-contain)
+  const scale = Math.min(canvasWidth / imgWidth, canvasHeight / imgHeight);
+  const renderedWidth = imgWidth * scale;
+  const renderedHeight = imgHeight * scale;
+  const offsetX = (canvasWidth - renderedWidth) / 2;
+  const offsetY = (canvasHeight - renderedHeight) / 2;
 
   // Set alpha blending from options
   ctx.globalAlpha = Math.max(
@@ -61,7 +63,7 @@ export function drawSemanticSegmentationOverlay({
 
   // Draw raster mask
   try {
-    ctx.drawImage(maskImage, 0, 0, imgWidth, imgHeight);
+    ctx.drawImage(maskImage, offsetX, offsetY, renderedWidth, renderedHeight);
   } catch (err) {
     console.warn("Failed to render semantic mask overlay:", err);
   }

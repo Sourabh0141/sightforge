@@ -135,10 +135,12 @@ export function drawDepthOverlay({
   ctx.translate(transform.panX, transform.panY);
   ctx.scale(transform.zoom, transform.zoom);
 
-  // Compute resolution scaling
-  const scaleX = canvasWidth / imgWidth;
-  const scaleY = canvasHeight / imgHeight;
-  ctx.scale(scaleX, scaleY);
+  // Compute uniform aspect-ratio scaling (object-contain)
+  const scale = Math.min(canvasWidth / imgWidth, canvasHeight / imgHeight);
+  const renderedWidth = imgWidth * scale;
+  const renderedHeight = imgHeight * scale;
+  const offsetX = (canvasWidth - renderedWidth) / 2;
+  const offsetY = (canvasHeight - renderedHeight) / 2;
 
   // Set alpha blending from options
   ctx.globalAlpha = Math.max(
@@ -148,7 +150,7 @@ export function drawDepthOverlay({
   ctx.imageSmoothingEnabled = true;
 
   try {
-    ctx.drawImage(depthImage, 0, 0, imgWidth, imgHeight);
+    ctx.drawImage(depthImage, offsetX, offsetY, renderedWidth, renderedHeight);
   } catch (err) {
     console.warn("Failed to render depth map overlay:", err);
   }

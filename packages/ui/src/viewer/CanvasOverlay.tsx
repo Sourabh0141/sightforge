@@ -26,6 +26,10 @@ import type {
 import type {
   SemanticSegmentationColorMapping,
   DepthMetadata,
+  BoundingBox,
+  RotatedBoundingBox,
+  CoordinatePoint,
+  PoseKeypoint,
 } from "@sightforge/contracts";
 import { createHatchPatternCanvas, sanitizeText } from "./palette";
 import {
@@ -93,6 +97,14 @@ export function CanvasOverlay({
     y: number;
   } | null>(null);
 
+  const [mediaDimensions, setMediaDimensions] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+
+  const effectiveSourceWidth = mediaDimensions?.width || sourceWidth || 1920;
+  const effectiveSourceHeight = mediaDimensions?.height || sourceHeight || 1080;
+
   const [containerSize, setContainerSize] = useState<{
     width: number;
     height: number;
@@ -102,6 +114,30 @@ export function CanvasOverlay({
   });
 
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
+
+  // Compute uniform aspect-ratio scaling (matching CSS object-contain)
+  const layout = useMemo(() => {
+    const { width: containerWidth, height: containerHeight } = containerSize;
+    if (containerWidth <= 0 || containerHeight <= 0) {
+      return {
+        scale: 1,
+        renderedWidth: 800,
+        renderedHeight: 450,
+        offsetX: 0,
+        offsetY: 0,
+      };
+    }
+    const scale = Math.min(
+      containerWidth / effectiveSourceWidth,
+      containerHeight / effectiveSourceHeight,
+    );
+    const renderedWidth = effectiveSourceWidth * scale;
+    const renderedHeight = effectiveSourceHeight * scale;
+    const offsetX = (containerWidth - renderedWidth) / 2;
+    const offsetY = (containerHeight - renderedHeight) / 2;
+
+    return { scale, renderedWidth, renderedHeight, offsetX, offsetY };
+  }, [containerSize, effectiveSourceWidth, effectiveSourceHeight]);
 
   // Load and decode dense artifact when artifactKey or currentFrameIndex changes (R50, R58)
   useEffect(() => {
@@ -174,6 +210,78 @@ export function CanvasOverlay({
     });
   }, [visibleRegions]);
 
+  // Map normalized coordinates [0, 1] to canvas pixel coordinates
+  const pixelRegions = useMemo(() => {
+    const { offsetX, offsetY, renderedWidth, renderedHeight } = layout;
+    return visibleRegions.map((reg) => {
+      const [nx, ny, nw, nh] = reg.box;
+      const isNormalized = nw <= 1.0 && nh <= 1.0 && nx <= 1.0 && ny <= 1.0;
+      const px = isNormalized ? offsetX + nx * renderedWidth : nx;
+      const py = isNormalized ? offsetY + ny * renderedHeight : ny;
+      const pw = isNormalized ? nw * renderedWidth : nw;
+      const ph = isNormalized ? nh * renderedHeight : nh;
+
+      let mappedRbox: RotatedBoundingBox | undefined = undefined;
+      if (reg.rbox) {
+        const [ncx, ncy, nw_r, nh_r, angleDeg] = reg.rbox;
+        const isRboxNorm = nw_r <= 1.0 && nh_r <= 1.0;
+        mappedRbox = [
+          isRboxNorm ? offsetX + ncx * renderedWidth : ncx,
+          isRboxNorm ? offsetY + ncy * renderedHeight : ncy,
+          isRboxNorm ? nw_r * renderedWidth : nw_r,
+          isRboxNorm ? nh_r * renderedHeight : nh_r,
+          angleDeg,
+        ];
+      }
+
+      let mappedPolygon: CoordinatePoint[] | undefined = undefined;
+      if (reg.polygon) {
+        mappedPolygon = reg.polygon.map(([ptX, ptY]) => {
+          const isPtNorm = ptX <= 1.0 && ptY <= 1.0;
+          return [
+            isPtNorm ? offsetX + ptX * renderedWidth : ptX,
+            isPtNorm ? offsetY + ptY * renderedHeight : ptY,
+          ];
+        });
+      }
+
+      let mappedKeypoints: PoseKeypoint[] | undefined = undefined;
+      if (reg.keypoints) {
+        mappedKeypoints = reg.keypoints.map((kp) => {
+          const isKpNorm = kp.x <= 1.0 && kp.y <= 1.0;
+          return {
+            ...kp,
+            x: isKpNorm ? offsetX + kp.x * renderedWidth : kp.x,
+            y: isKpNorm ? offsetY + kp.y * renderedHeight : kp.y,
+          };
+        });
+      }
+
+      let mappedTrajectory:
+        Array<{ frameIndex: number; x: number; y: number }> | undefined =
+        undefined;
+      if (reg.trajectory) {
+        mappedTrajectory = reg.trajectory.map((t) => {
+          const isTNorm = t.x <= 1.0 && t.y <= 1.0;
+          return {
+            frameIndex: t.frameIndex,
+            x: isTNorm ? offsetX + t.x * renderedWidth : t.x,
+            y: isTNorm ? offsetY + t.y * renderedHeight : t.y,
+          };
+        });
+      }
+
+      return {
+        ...reg,
+        box: [px, py, pw, ph] as BoundingBox,
+        rbox: mappedRbox,
+        polygon: mappedPolygon,
+        keypoints: mappedKeypoints,
+        trajectory: mappedTrajectory,
+      };
+    }) as NormalizedRegion[];
+  }, [visibleRegions, layout]);
+
   // Resize observer to keep canvas DPI scaled to container
   useEffect(() => {
     const container = containerRef.current;
@@ -224,8 +332,8 @@ export function CanvasOverlay({
         ctx,
         maskImage: artifactImage,
         colorPalette: semanticPalette,
-        imgWidth: sourceWidth,
-        imgHeight: sourceHeight,
+        imgWidth: effectiveSourceWidth,
+        imgHeight: effectiveSourceHeight,
         canvasWidth: width,
         canvasHeight: height,
         options,
@@ -236,8 +344,8 @@ export function CanvasOverlay({
         ctx,
         depthImage: artifactImage,
         metadata: depthMetadata,
-        imgWidth: sourceWidth,
-        imgHeight: sourceHeight,
+        imgWidth: effectiveSourceWidth,
+        imgHeight: effectiveSourceHeight,
         canvasWidth: width,
         canvasHeight: height,
         options,
@@ -249,10 +357,10 @@ export function CanvasOverlay({
     // =======================================================================
     // 2. SPARSE VECTOR OVERLAYS (Detection, OBB, Pose, Instance Seg, Tracking)
     // =======================================================================
-    if (options.showOverlays && visibleRegions.length > 0) {
+    if (options.showOverlays && pixelRegions.length > 0) {
       // Pass 1: Render tracking trajectory polylines behind bounding boxes
       if (options.showTracks) {
-        for (const reg of visibleRegions) {
+        for (const reg of pixelRegions) {
           if (reg.trajectory && reg.trajectory.length > 1) {
             const isSelected = options.activeRegionId === reg.id;
             const isHovered = options.hoveredRegionId === reg.id;
@@ -280,7 +388,7 @@ export function CanvasOverlay({
       }
 
       // Pass 2: Render foreground region instances
-      for (const reg of visibleRegions) {
+      for (const reg of pixelRegions) {
         const isSelected = options.activeRegionId === reg.id;
         const isHovered = options.hoveredRegionId === reg.id;
         const isDimmed =
@@ -335,10 +443,10 @@ export function CanvasOverlay({
     semanticPalette,
     depthMetadata,
     probeCoords,
-    visibleRegions,
+    pixelRegions,
     options,
-    sourceWidth,
-    sourceHeight,
+    effectiveSourceWidth,
+    effectiveSourceHeight,
     currentFrameIndex,
   ]);
 
@@ -364,19 +472,19 @@ export function CanvasOverlay({
       setProbeCoords({ x: clientX, y: clientY });
     }
 
-    if (visibleRegions.length === 0) return;
-
-    const scaleX = sourceWidth / containerSize.width;
-    const scaleY = sourceHeight / containerSize.height;
-    const imgX = clientX * scaleX;
-    const imgY = clientY * scaleY;
+    if (pixelRegions.length === 0) return;
 
     // Hit test reverse order (topmost first)
-    for (let i = visibleRegions.length - 1; i >= 0; i--) {
-      const reg = visibleRegions[i]!;
+    for (let i = pixelRegions.length - 1; i >= 0; i--) {
+      const reg = pixelRegions[i]!;
       const [bx, by, bw, bh] = reg.box;
-      if (imgX >= bx && imgX <= bx + bw && imgY >= by && imgY <= by + bh) {
-        onRegionHover?.(reg);
+      if (
+        clientX >= bx &&
+        clientX <= bx + bw &&
+        clientY >= by &&
+        clientY <= by + bh
+      ) {
+        onRegionHover?.(visibleRegions[i] || null);
         return;
       }
     }
@@ -391,7 +499,7 @@ export function CanvasOverlay({
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (visibleRegions.length === 0) {
+    if (pixelRegions.length === 0) {
       onRegionSelect?.(null);
       return;
     }
@@ -401,18 +509,23 @@ export function CanvasOverlay({
     const clientX = e.clientX - rect.left;
     const clientY = e.clientY - rect.top;
 
-    const scaleX = sourceWidth / containerSize.width;
-    const scaleY = sourceHeight / containerSize.height;
-    const imgX = clientX * scaleX;
-    const imgY = clientY * scaleY;
-
-    for (let i = visibleRegions.length - 1; i >= 0; i--) {
-      const reg = visibleRegions[i]!;
+    for (let i = pixelRegions.length - 1; i >= 0; i--) {
+      const reg = pixelRegions[i]!;
       const [bx, by, bw, bh] = reg.box;
-      if (imgX >= bx && imgX <= bx + bw && imgY >= by && imgY <= by + bh) {
-        onRegionSelect?.(reg);
-        const accIdx = accessibleRegions.findIndex((r) => r.id === reg.id);
-        if (accIdx >= 0) setFocusedIndex(accIdx);
+      if (
+        clientX >= bx &&
+        clientX <= bx + bw &&
+        clientY >= by &&
+        clientY <= by + bh
+      ) {
+        const origReg = visibleRegions[i] || null;
+        onRegionSelect?.(origReg);
+        if (origReg) {
+          const accIdx = accessibleRegions.findIndex(
+            (r) => r.id === origReg.id,
+          );
+          if (accIdx >= 0) setFocusedIndex(accIdx);
+        }
         return;
       }
     }
@@ -474,12 +587,30 @@ export function CanvasOverlay({
             className="absolute inset-0 w-full h-full object-contain pointer-events-none"
             playsInline
             muted
+            onLoadedMetadata={(e) => {
+              const vid = e.currentTarget;
+              if (vid.videoWidth > 0 && vid.videoHeight > 0) {
+                setMediaDimensions({
+                  width: vid.videoWidth,
+                  height: vid.videoHeight,
+                });
+              }
+            }}
           />
         ) : (
           <img
             src={mediaUrl}
             alt="Source media under analysis"
             className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+            onLoad={(e) => {
+              const img = e.currentTarget;
+              if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                setMediaDimensions({
+                  width: img.naturalWidth,
+                  height: img.naturalHeight,
+                });
+              }
+            }}
           />
         )
       ) : (
