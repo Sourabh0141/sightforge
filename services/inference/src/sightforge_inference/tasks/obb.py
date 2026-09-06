@@ -34,8 +34,10 @@ class ObbAdapter(BaseYOLOAdapter):
         frames: list[np.ndarray[Any, Any]],
         config: InferenceConfig,
     ) -> SightForgeResultDocument:
+        self.ensure_model_loaded()
         start_time = time.perf_counter()
         obb_frames: list[ObbFrame] = []
+        target_device = self.resolve_device(config.device)
 
         inference_start = time.perf_counter()
         for idx, frame in enumerate(frames):
@@ -47,7 +49,7 @@ class ObbAdapter(BaseYOLOAdapter):
                     source=frame,
                     conf=config.confidence_threshold,
                     iou=config.iou_threshold,
-                    device=config.device if config.device != "cuda" else 0,
+                    device=target_device,
                     verbose=False,
                 )
                 if results and len(results) > 0:

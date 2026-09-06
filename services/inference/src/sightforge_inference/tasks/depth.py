@@ -34,8 +34,10 @@ class DepthAdapter(BaseYOLOAdapter):
         frames: list[np.ndarray[Any, Any]],
         config: InferenceConfig,
     ) -> SightForgeResultDocument:
+        self.ensure_model_loaded()
         start_time = time.perf_counter()
         h, w = (frames[0].shape[:2]) if frames else (480, 640)
+        target_device = self.resolve_device(config.device)
 
         inference_start = time.perf_counter()
         min_depth = 0.5
@@ -44,7 +46,7 @@ class DepthAdapter(BaseYOLOAdapter):
         if self.model is not None and frames:
             results = self.model.predict(
                 source=frames[0],
-                device=config.device if config.device != "cuda" else 0,
+                device=target_device,
                 verbose=False,
             )
             if results and len(results) > 0:

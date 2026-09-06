@@ -55,8 +55,10 @@ class PoseAdapter(BaseYOLOAdapter):
         frames: list[np.ndarray[Any, Any]],
         config: InferenceConfig,
     ) -> SightForgeResultDocument:
+        self.ensure_model_loaded()
         start_time = time.perf_counter()
         pose_frames: list[PoseFrame] = []
+        target_device = self.resolve_device(config.device)
 
         inference_start = time.perf_counter()
         for idx, frame in enumerate(frames):
@@ -68,7 +70,7 @@ class PoseAdapter(BaseYOLOAdapter):
                     source=frame,
                     conf=config.confidence_threshold,
                     iou=config.iou_threshold,
-                    device=config.device if config.device != "cuda" else 0,
+                    device=target_device,
                     verbose=False,
                 )
                 if results and len(results) > 0:

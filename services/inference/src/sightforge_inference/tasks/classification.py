@@ -32,8 +32,10 @@ class ClassificationAdapter(BaseYOLOAdapter):
         frames: list[np.ndarray[Any, Any]],
         config: InferenceConfig,
     ) -> SightForgeResultDocument:
+        self.ensure_model_loaded()
         start_time = time.perf_counter()
         cls_frames: list[ClassificationFrame] = []
+        target_device = self.resolve_device(config.device)
 
         inference_start = time.perf_counter()
         for idx, frame in enumerate(frames):
@@ -43,7 +45,7 @@ class ClassificationAdapter(BaseYOLOAdapter):
             if self.model is not None:
                 results = self.model.predict(
                     source=frame,
-                    device=config.device if config.device != "cuda" else 0,
+                    device=target_device,
                     verbose=False,
                 )
                 if results and len(results) > 0:

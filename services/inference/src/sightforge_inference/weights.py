@@ -119,19 +119,26 @@ def ensure_weights_cached(
             f"Unsupported task and variant combination: task='{task}', variant='{variant}'"
         )
 
-    target_path = Path(base_dir) / metadata.filename
-    if target_path.is_file() and verify_weight_checksum(target_path, metadata.sha256):
-        return target_path
+    try:
+        target_path = Path(base_dir) / metadata.filename
+        if target_path.is_file() and verify_weight_checksum(target_path, metadata.sha256):
+            return target_path
 
-    # Missing or checksum failed: download and verify
-    downloaded_path = download_weight_checkpoint(task, variant, base_dir=base_dir)
+        # Missing or checksum failed: download and verify
+        downloaded_path = download_weight_checkpoint(task, variant, base_dir=base_dir)
 
-    # Persist to Modal volume if volume is provided
-    if volume is not None and hasattr(volume, "commit"):
-        with contextlib.suppress(Exception):
-            volume.commit()
+        # Persist to Modal volume if volume is provided
+        if volume is not None and hasattr(volume, "commit"):
+            with contextlib.suppress(Exception):
+                volume.commit()
 
-    return downloaded_path
+        return downloaded_path
+    except OSError:
+        fallback_dir = Path.home() / ".cache" / "sightforge" / "weights"
+        target_path = fallback_dir / metadata.filename
+        if target_path.is_file() and verify_weight_checksum(target_path, metadata.sha256):
+            return target_path
+        return download_weight_checkpoint(task, variant, base_dir=fallback_dir)
 
 
 def seed_all_weights(

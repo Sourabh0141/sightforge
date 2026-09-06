@@ -43,6 +43,37 @@ class BaseYOLOAdapter(ModelAdapter, ABC):
 
         self._model = YOLO(str(weights_path))
 
+    def ensure_model_loaded(self, base_dir: Path | str | None = None) -> None:
+        """Ensures model checkpoint is verified, cached, and loaded into memory."""
+        if self._model is None:
+            from ..app import weights_volume
+            from ..config import WEIGHTS_MOUNT_PATH
+            from ..weights import ensure_weights_cached
+
+            target_base = base_dir or WEIGHTS_MOUNT_PATH
+            try:
+                weights_path = ensure_weights_cached(
+                    self._task, self._variant, base_dir=target_base, volume=weights_volume
+                )
+            except OSError:
+                local_cache = Path.home() / ".cache" / "sightforge" / "weights"
+                weights_path = ensure_weights_cached(
+                    self._task, self._variant, base_dir=local_cache, volume=None
+                )
+            self.load_model(weights_path)
+
+    def resolve_device(self, requested_device: str | None = None) -> str | int:
+        """Resolves target compute device safely falling back to CPU when CUDA is unavailable."""
+        import torch
+
+        if requested_device == "cpu":
+            return "cpu"
+        if torch.cuda.is_available():
+            if requested_device == "cuda" or requested_device is None:
+                return 0
+            return requested_device
+        return "cpu"
+
     def _create_summary(
         self,
         start_time: float,

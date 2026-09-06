@@ -614,11 +614,28 @@ async function handleGetJobResults(
     expiresInSeconds: 3600, // 1 hour
   });
 
+  let mediaDownloadUrl: string | undefined;
+  if (job.mediaKey) {
+    mediaDownloadUrl = await generatePresignedUrl({
+      method: "GET",
+      bucketName: "sightforge-media-prod",
+      objectKey: job.mediaKey,
+      accessKeyId: env.R2_MEDIA_ACCESS_KEY_ID || "dummy_key",
+      secretAccessKey: env.R2_MEDIA_SECRET_ACCESS_KEY || "dummy_secret",
+      accountId:
+        env.CLOUDFLARE_ACCOUNT_ID || env.R2_ACCOUNT_ID || "dummy_account_id",
+      contentType: job.mediaType === "video" ? "video/mp4" : "image/jpeg",
+      contentDisposition: "inline",
+      expiresInSeconds: 3600,
+    });
+  }
+
   return new Response(
     JSON.stringify({
       jobId,
       resultKey: job.resultKey,
       downloadUrl,
+      mediaDownloadUrl,
       expiresInSeconds: 3600,
     }),
     { headers: { "Content-Type": "application/json" } },

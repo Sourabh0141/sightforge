@@ -37,6 +37,7 @@ interface ResultsResponse {
   jobId: string;
   resultKey: string;
   downloadUrl: string;
+  mediaDownloadUrl?: string;
   expiresInSeconds: number;
 }
 
@@ -56,6 +57,7 @@ function SingleJobView({ jobId }: { jobId: string }) {
 
   const [resultDocument, setResultDocument] =
     useState<SightForgeResultDocument | null>(null);
+  const [mediaUrl, setMediaUrl] = useState<string | undefined>(undefined);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
   const [resultsError, setResultsError] = useState<string | null>(null);
 
@@ -63,6 +65,7 @@ function SingleJobView({ jobId }: { jobId: string }) {
   useEffect(() => {
     if (!jobStatus || jobStatus.status !== "completed") {
       setResultDocument(null);
+      setMediaUrl(undefined);
       return;
     }
 
@@ -72,6 +75,9 @@ function SingleJobView({ jobId }: { jobId: string }) {
       setResultsError(null);
       try {
         const res = await api.get<ResultsResponse>(`/jobs/${jobId}/results`);
+        if (isMounted && res.mediaDownloadUrl) {
+          setMediaUrl(res.mediaDownloadUrl);
+        }
         const jsonRes = await fetch(res.downloadUrl);
         if (!jsonRes.ok) {
           throw new Error("Failed to download result payload from storage.");
@@ -226,6 +232,7 @@ function SingleJobView({ jobId }: { jobId: string }) {
       {/* Unified Viewer Shell */}
       <ViewerShell
         document={resultDocument}
+        mediaUrl={mediaUrl}
         resolveArtifact={resolveArtifact}
       />
     </div>
