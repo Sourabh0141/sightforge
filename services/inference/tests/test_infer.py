@@ -252,22 +252,16 @@ def test_inference_runner_enter_and_cold_start() -> None:
     runner.variant = "nano"
 
     with (
-        patch("sightforge_inference.infer.get_weight_path") as mock_weight_path,
-        patch("sightforge_inference.infer.verify_weight_checksum") as mock_verify,
+        patch("sightforge_inference.infer.ensure_weights_cached") as mock_ensure,
         patch("sightforge_inference.infer.get_task_adapter") as mock_get_adapter,
-        patch("sightforge_inference.infer.get_weight_metadata") as mock_meta,
     ):
         mock_path = MagicMock()
-        mock_path.exists.return_value = True
-        mock_weight_path.return_value = mock_path
-        mock_metadata = MagicMock()
-        mock_metadata.sha256 = "abc123"
-        mock_meta.return_value = mock_metadata
+        mock_ensure.return_value = mock_path
         mock_adapter = MagicMock()
         mock_get_adapter.return_value = mock_adapter
 
         runner.enter()
-        mock_verify.assert_called_once_with(mock_path, "abc123")
+        mock_ensure.assert_called_once()
         mock_adapter.load_model.assert_called_once_with(mock_path)
 
         # First infer_frames call reports cold start duration

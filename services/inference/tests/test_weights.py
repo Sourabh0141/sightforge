@@ -2,6 +2,7 @@
 
 import hashlib
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sightforge_inference.config import (
@@ -11,6 +12,8 @@ from sightforge_inference.config import (
 )
 from sightforge_inference.weights import (
     compute_file_sha256,
+    download_weight_checkpoint,
+    ensure_weights_cached,
     get_weight_metadata,
     get_weight_path,
     verify_weight_checksum,
@@ -68,3 +71,42 @@ def test_checksum_verification(tmp_path: Path) -> None:
     # 3. Rejects non-existent file
     missing_file = tmp_path / "missing.pt"
     assert verify_weight_checksum(missing_file, expected_hash) is False
+
+
+def test_ensure_weights_cached_existing(tmp_path: Path) -> None:
+    """Verifies that ensure_weights_cached reuses existing verified file without download."""
+    meta = get_weight_metadata("detection", "nano")
+    assert meta is not None
+
+    weight_file = tmp_path / meta.filename
+    with patch("sightforge_inference.weights.verify_weight_checksum", return_value=True):
+        weight_file.write_bytes(b"dummy_data")
+        result = ensure_weights_cached("detection", "nano", base_dir=tmp_path)
+        assert result == weight_file
+
+
+def test_download_weight_checkpoint(tmp_path: Path) -> None:
+    """Verifies download_weight_checkpoint downloads, computes sha256, and atomically saves."""
+    meta = get_weight_metadata("detection", "nano")
+    assert meta is not None
+
+    dummy_content = b"valid_checkpoint_data"
+    expected_hash = hashlib.sha256(dummy_content).hexdigest()
+
+    mock_resp = MagicMock()
+    mock_resp.iter_content.return_value = [dummy_content]
+    mock_resp.raise_for_status.return_value = None
+
+    with (
+        patch("requests.get", return_value=mock_resp),
+        patch("sightforge_inference.weights.get_weight_metadata") as mock_meta,
+    ):
+        mock_metadata = MagicMock()
+        mock_metadata.filename = "yolo26n.pt"
+        mock_metadata.sha256 = expected_hash
+        mock_metadata.download_url = "https://example.com/yolo26n.pt"
+        mock_meta.return_value = mock_metadata
+
+        saved_path = download_weight_checkpoint("detection", "nano", base_dir=tmp_path)
+        assert saved_path.exists()
+        assert saved_path.read_bytes() == dummy_content

@@ -33,6 +33,7 @@ class InferenceConfig:
     iou_threshold: float = 0.45
     sampled_fps: float | None = None
     source_fps: float | None = None
+    classes: list[int] | None = None
     device: str = "cuda"
 
 

@@ -15,6 +15,7 @@ export interface CreateJobInput {
   mediaType: "image" | "video";
   originalFilename: string;
   confidenceThreshold?: number;
+  classes?: number[];
   sourceFps?: number;
   sampledFps?: number;
 }
@@ -27,6 +28,7 @@ export interface CreateJobResponse {
   mediaType: "image" | "video";
   modelVariant: ModelVariant;
   confidenceThreshold: number;
+  classes?: number[] | null;
   uploadUrl: string;
   uploadContentType: string;
   mediaKey: string;
@@ -80,6 +82,7 @@ export function uploadMediaJob(
         mediaType: config.mediaType,
         originalFilename: config.originalFilename || file.name,
         confidenceThreshold: config.confidenceThreshold ?? 0.25,
+        classes: config.classes,
         sourceFps: config.sourceFps,
         sampledFps: config.sampledFps,
       },

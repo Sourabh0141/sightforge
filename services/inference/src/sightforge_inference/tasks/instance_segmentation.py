@@ -48,6 +48,7 @@ class InstanceSegmentationAdapter(BaseYOLOAdapter):
                     source=frame,
                     conf=config.confidence_threshold,
                     iou=config.iou_threshold,
+                    classes=config.classes,
                     device=config.device if config.device != "cuda" else 0,
                     verbose=False,
                 )

@@ -283,6 +283,10 @@ async function handleCreateJob(
     resultKey: config.resultKey,
     denseArtifactKey: config.denseArtifactKey,
     confidenceThreshold: config.confidenceThreshold,
+    classes:
+      config.classes && config.classes.length > 0
+        ? JSON.stringify(config.classes)
+        : null,
     sourceFps: config.sourceFps,
     sampledFps: config.sampledFps,
     framesTotal: null,
@@ -312,6 +316,7 @@ async function handleCreateJob(
     mediaType: config.mediaType,
     modelVariant: config.modelVariant,
     confidenceThreshold: config.confidenceThreshold,
+    classes: config.classes,
     uploadUrl,
     uploadContentType,
     mediaKey: config.mediaKey,

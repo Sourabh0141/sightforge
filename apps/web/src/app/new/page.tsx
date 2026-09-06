@@ -93,6 +93,7 @@ export default function NewJobPage() {
           mediaType: mediaMetadata.mediaType,
           originalFilename: selectedFile.name,
           confidenceThreshold: configValues.confidenceThreshold,
+          classes: configValues.classes,
           sampledFps: isVideo ? configValues.sampledFps : undefined,
         },
         (progress) => {

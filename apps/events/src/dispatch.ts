@@ -50,6 +50,7 @@ export async function dispatchInference(
       modelVariant: job.modelVariant,
       confidenceThreshold: job.confidenceThreshold,
       sampledFps: job.sampledFps,
+      classes: job.classes ? JSON.parse(job.classes) : undefined,
       mediaKey: job.mediaKey,
       mediaEtag: job.mediaEtag,
       resultKey: job.resultKey,
