@@ -1,6 +1,6 @@
 """Tests for the Seven Computer Vision Task Implementations (P3 U3, R34, R45)."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -286,3 +286,29 @@ def test_depth_adapter_dense_artifact() -> None:
         root.artifact.depth_metadata.min_depth_meters
         < root.artifact.depth_metadata.max_depth_meters
     )
+
+
+def test_adapter_ensure_model_loaded_and_resolve_device() -> None:
+    """Verifies ensure_model_loaded loads weights and resolve_device handles CPU/GPU."""
+    adapter = DetectionAdapter(variant="nano", model=None)
+    assert adapter.model is None
+
+    with (
+        patch("sightforge_inference.weights.ensure_weights_cached") as mock_ensure,
+        patch.object(adapter, "load_model") as mock_load,
+    ):
+        mock_path = MagicMock()
+        mock_ensure.return_value = mock_path
+
+        adapter.ensure_model_loaded()
+        mock_ensure.assert_called_once()
+        mock_load.assert_called_once_with(mock_path)
+
+    # Test resolve_device behavior
+    assert adapter.resolve_device("cpu") == "cpu"
+    with patch("torch.cuda.is_available", return_value=False):
+        assert adapter.resolve_device("cuda") == "cpu"
+    with patch("torch.cuda.is_available", return_value=True):
+        assert adapter.resolve_device("cuda") == 0
+        assert adapter.resolve_device(None) == 0
+

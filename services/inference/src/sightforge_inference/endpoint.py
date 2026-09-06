@@ -21,6 +21,7 @@ import requests
 
 from .adapter import InferenceConfig
 from .app import (
+    VOLUME_MOUNTS,
     app,
     cpu_image,
     inference_secrets,
@@ -421,6 +422,7 @@ def execute_job_orchestration(
 
 @app.function(
     image=cpu_image,
+    volumes=cast(Any, VOLUME_MOUNTS),
     secrets=[inference_secrets],
     timeout=600,
 )

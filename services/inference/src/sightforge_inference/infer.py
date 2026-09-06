@@ -120,8 +120,10 @@ def run_tracking_pipeline(
             "Tracking is only eligible for: detection, instance-segmentation, pose, obb (R42, R43)."
         )
 
+    adapter.ensure_model_loaded()
     start_time = time.perf_counter()
     tracker_yaml = build_tracker_config(config.job_id, fps=effective_fps)
+    target_device = adapter.resolve_device(config.device)
 
     # Reset predictor/tracker state before processing frame 0 to prevent ID carry-over (R44)
     if (
@@ -147,7 +149,7 @@ def run_tracking_pipeline(
                 conf=config.confidence_threshold,
                 iou=config.iou_threshold,
                 classes=config.classes,
-                device=config.device if config.device != "cuda" else 0,
+                device=target_device,
                 verbose=False,
             )
             if results and len(results) > 0:
@@ -482,6 +484,8 @@ class InferenceRunner:
 
         if not hasattr(self, "adapter") or self.adapter is None:
             self.adapter = get_task_adapter(vision_task, variant=model_variant)
+        if self.adapter is not None:
+            self.adapter.ensure_model_loaded()
 
         # Measure container cold-start duration on first served invocation (R45)
         cold_start_ms = 0.0
