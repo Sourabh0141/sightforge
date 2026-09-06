@@ -3,7 +3,6 @@ name = "sightforge-inference"
 version = "0.1.0"
 description = "SightForge computer vision inference service on Modal Labs"
 requires-python = ">=3.11"
-readme = "README.md"
 license = { text = "AGPL-3.0-only" }
 dependencies = [
     "modal>=0.73.0",

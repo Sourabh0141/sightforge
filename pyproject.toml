@@ -3,7 +3,6 @@ name = "sightforge-root"
 version = "0.1.0"
 description = "SightForge serverless computer vision platform monorepo"
 requires-python = ">=3.11"
-readme = "README.md"
 license = { text = "AGPL-3.0-only" }
 dependencies = []
 
